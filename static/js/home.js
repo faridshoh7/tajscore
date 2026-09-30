@@ -57,9 +57,11 @@ window.Home = (function () {
     box.innerHTML = html;
   }
 
-  /* Активную вкладку подводим к центру, чтобы «сегодня» было видно сразу */
+  /* Активную дату подводим к центру, чтобы «сегодня» было видно сразу.
+     Прокручивается именно лента дат (#tabsDays): «LIVE» и «Все» вынесены из
+     неё и стоят на месте, поэтому считать смещение по всей строке нельзя. */
   function scrollToActive(smooth) {
-    const bar = $("#tabs"), act = bar && bar.querySelector(".tab.is-active");
+    const bar = $("#tabsDays"), act = bar && bar.querySelector(".tab.is-active");
     if (!bar || !act) return;
     const left = act.offsetLeft - bar.clientWidth / 2 + act.offsetWidth / 2;
     bar.scrollTo({ left: Math.max(0, left), behavior: smooth ? "smooth" : "auto" });

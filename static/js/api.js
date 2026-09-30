@@ -21,6 +21,7 @@ window.API = (function () {
     popular: () => get("/api/popular"),
     team: id => get("/api/teams/" + id),
     search: q => get("/api/search", { q }),
+    ads: () => get("/api/ads"),
     status: () => get("/api/status")
   };
 })();

@@ -116,7 +116,26 @@ window.App = (function () {
     document.addEventListener("click", e => {
       if (!e.target.closest("#search")) box.classList.remove("is-open");
     });
-    input.addEventListener("keydown", e => { if (e.key === "Escape") box.classList.remove("is-open"); });
+    input.addEventListener("keydown", e => { if (e.key === "Escape") closeSearch(); });
+
+    /* На телефоне поиск раскрывается поверх шапки по кнопке-лупе: строка ввода
+       не отбирает место у логотипа и кнопок (см. .hdr.is-searching в CSS).
+       На широком экране класс ни на что не влияет — поле и так на виду. */
+    $("#btnSearch")?.addEventListener("click", () => {
+      const hdr = document.querySelector(".hdr");
+      const on = !hdr.classList.contains("is-searching");
+      hdr.classList.toggle("is-searching", on);
+      if (on) input.focus(); else closeSearch();
+    });
+    $("#btnSearchClose")?.addEventListener("click", closeSearch);
+    document.addEventListener("click", e => {
+      if (!e.target.closest("#search") && !e.target.closest("#btnSearch")) closeSearch();
+    });
+  }
+
+  function closeSearch() {
+    document.querySelector(".hdr")?.classList.remove("is-searching");
+    document.getElementById("searchResults")?.classList.remove("is-open");
   }
 
   /* ------------------------------------------------------------- настройки */
@@ -237,6 +256,7 @@ window.App = (function () {
     initSearch();
     initSettings();
     initMobile();
+    if (window.Ads) Ads.init();
     renderLeagues(opts.activeLeagueId);
     renderPopular();
     renderFavorites();

@@ -118,6 +118,7 @@ window.I18N = {
     "misc.yesterday": "Вчера",
 
     "a11y.fav": "В избранное", "a11y.close": "Закрыть", "a11y.back": "Назад",
+    "ads.label": "Реклама",
 
     "tz.Asia/Dushanbe": "Душанбе", "tz.Asia/Tashkent": "Ташкент",
     "tz.Asia/Almaty": "Алматы", "tz.Europe/Moscow": "Москва",
@@ -241,6 +242,7 @@ window.I18N = {
     "misc.yesterday": "Дирӯз",
 
     "a11y.fav": "Ба дӯстдоштаҳо", "a11y.close": "Пӯшидан", "a11y.back": "Бозгашт",
+    "ads.label": "Реклама",
 
     "tz.Asia/Dushanbe": "Душанбе", "tz.Asia/Tashkent": "Тошканд",
     "tz.Asia/Almaty": "Алмаато", "tz.Europe/Moscow": "Маскав",
