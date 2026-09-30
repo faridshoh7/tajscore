@@ -1,0 +1,45 @@
+[Unit]
+Description=Tajscore — футбольные результаты (FastAPI + воркер синхронизации)
+Documentation=https://tajscore.duckdns.org
+# Воркер сразу ходит в API-Football, поэтому ждём реальную сеть, а не просто поднятый интерфейс
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tajscore
+Group=tajscore
+WorkingDirectory=/home/tajscore/tajscore
+
+# API-ключ приложение читает само из .env через python-dotenv (app/config.py),
+# поэтому EnvironmentFile здесь не нужен — ключ не попадает в вывод systemctl show.
+Environment=PYTHONUNBUFFERED=1
+
+ExecStart=/home/tajscore/tajscore/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+# Падение по любой причине — поднимаем заново
+Restart=always
+RestartSec=5
+# Если сервис бьётся в цикле, не долбим бесконечно: 5 попыток за 60 с, иначе стоп
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tajscore
+
+# Аккуратное завершение: uvicorn закрывает воркер через lifespan
+KillSignal=SIGINT
+TimeoutStopSec=20
+
+# --- Ограничения прав ---
+# ProtectHome НЕ включаем: приложение пишет SQLite в /home/tajscore/tajscore/data
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

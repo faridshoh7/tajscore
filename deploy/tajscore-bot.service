@@ -1,0 +1,52 @@
+[Unit]
+Description=Tajscore Telegram-бот — вход на сайт и админ-панель
+Documentation=https://t.me/tajscoreregbot
+# Бот сразу идёт long-polling'ом на api.telegram.org, поэтому нужна настоящая сеть
+After=network-online.target
+Wants=network-online.target
+# Сайт и бот делят одну SQLite. Жёсткой зависимости нет: бот поднимет и
+# проинициализирует базу сам, если сайт по какой-то причине лежит.
+After=tajscore.service
+
+# Обрыв связи с Telegram — обычное дело, поэтому окно перезапусков широкое:
+# 10 попыток за 5 минут, дальше systemd останавливает сервис.
+# ВАЖНО: эти два ключа живут в [Unit]; в [Service] systemd их молча игнорирует.
+StartLimitBurst=10
+StartLimitIntervalSec=300
+
+[Service]
+Type=simple
+User=tajscore
+Group=tajscore
+WorkingDirectory=/home/tajscore/tajscore
+
+# Токен бота и ADMIN_TELEGRAM_ID приложение читает из .env через python-dotenv
+# (app/config.py), поэтому EnvironmentFile не нужен: секреты не видны
+# в выводе systemctl show.
+Environment=PYTHONUNBUFFERED=1
+
+ExecStart=/home/tajscore/tajscore/venv/bin/python -m bot.main
+
+Restart=always
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tajscore-bot
+
+# SIGINT: aiogram корректно закрывает polling и HTTP-сессию.
+# Даём 30 с — идущая рассылка успевает доработать пачку.
+KillSignal=SIGINT
+TimeoutStopSec=30
+
+# --- Ограничения прав ---
+# ProtectHome НЕ включаем: бот пишет в ту же SQLite в /home/tajscore/tajscore/data
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Матч — Tajscore{% endblock %}
+{% block content %}
+<div id="matchPage"></div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/match.js?v=7"></script>
+<script>App.init(); MatchPage.init({{ fixture_id }});</script>
+{% endblock %}

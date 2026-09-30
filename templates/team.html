@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Команда — Tajscore{% endblock %}
+{% block content %}
+<div id="teamPage"></div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/team.js?v=7"></script>
+<script>App.init(); TeamPage.init({{ team_id }});</script>
+{% endblock %}
