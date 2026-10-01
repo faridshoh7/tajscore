@@ -1,72 +1,139 @@
-"""Админка: журнал посещений.
+"""Админ-панель Tajscore.
 
-Доступ закрыт HTTP Basic Auth. Пароль берётся из ADMIN_PASSWORD в .env —
-если переменная не задана, админка не отвечает вовсе: пустой пароль хуже,
-чем выключенный раздел.
-
-IP посетителей — персональные данные. Записи старше RETENTION_DAYS удаляются
-при каждом открытии журнала.
+Разделы:
+  - Обзор: ключевые метрики одним экраном
+  - Пользователи: устройства посетителей (по cookie, не по IP)
+  - Контент: лиги, команды, игроки, фото
+  - API и парсеры: расход запросов, интервалы, состояние синхронизации
 """
 import logging
 import os
+import re
 import secrets
 import time
+import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 
-from app import db
-from app.config import TEMPLATES_DIR
+from app import budget, db
+from app.config import (
+    DAILY_SOFT_LIMIT, FD_SYNC, LEAGUES, ODDS, PHOTOS, SYNC, TEMPLATES_DIR,
+)
 
 log = logging.getLogger("tajscore.admin")
-TZ = timezone(timedelta(hours=5))   # Asia/Dushanbe
+TZ = timezone(timedelta(hours=5))
 router = APIRouter(prefix="/adminpanel")
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 
 def _fmt_dt(ts) -> str:
-    """Время показываем по Душанбе — админ смотрит из Таджикистана."""
     if not ts:
         return "—"
     return datetime.fromtimestamp(int(ts), TZ).strftime("%d.%m.%Y %H:%M")
 
 
+def _fmt_ago(ts) -> str:
+    if not ts:
+        return "—"
+    delta = int(time.time()) - int(ts)
+    if delta < 60:
+        return "только что"
+    if delta < 3600:
+        return f"{delta // 60} мин назад"
+    if delta < 86400:
+        return f"{delta // 3600} ч назад"
+    return f"{delta // 86400} дн назад"
+
+
 templates.env.filters["dt"] = _fmt_dt
+templates.env.filters["ago"] = _fmt_ago
 security = HTTPBasic(auto_error=False)
 
 ADMIN_USER = os.getenv("ADMIN_USER", "admin")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 RETENTION_DAYS = int(os.getenv("VISITS_RETENTION_DAYS", "90"))
+DEVICE_COOKIE = "ts_device"
+DEVICE_COOKIE_TTL = 365 * 86400
 
-# Пути, которые не считаем посещениями: статика, служебное, сама админка
 SKIP_PREFIXES = ("/static", "/api", "/adminpanel", "/favicon")
 
 
-def client_ip(request: Request) -> str:
-    """Реальный адрес посетителя.
+def _parse_device_name(ua: str) -> str:
+    """Краткое имя устройства из User-Agent."""
+    if not ua:
+        return "Неизвестно"
+    ua_lower = ua.lower()
+    device = ""
+    browser = ""
+    if "iphone" in ua_lower:
+        device = "iPhone"
+    elif "ipad" in ua_lower:
+        device = "iPad"
+    elif "android" in ua_lower:
+        m = re.search(r"Android[^;)]*;\s*([^;)]+)", ua, re.I)
+        device = m.group(1).strip().split(" Build")[0] if m else "Android"
+    elif "macintosh" in ua_lower or "mac os" in ua_lower:
+        device = "Mac"
+    elif "windows" in ua_lower:
+        device = "Windows"
+    elif "linux" in ua_lower:
+        device = "Linux"
+    elif "bot" in ua_lower or "crawl" in ua_lower or "spider" in ua_lower:
+        return "Бот"
+    else:
+        device = "Другое"
 
-    Сайт стоит за nginx, поэтому request.client.host — это всегда 127.0.0.1.
-    Настоящий адрес приходит в заголовках, которые проставляет прокси.
-    """
-    xff = request.headers.get("x-forwarded-for")
-    if xff:
-        return xff.split(",")[0].strip()
-    return request.headers.get("x-real-ip") or (request.client.host if request.client else "")
+    if "edg" in ua_lower:
+        browser = "Edge"
+    elif "opr" in ua_lower or "opera" in ua_lower:
+        browser = "Opera"
+    elif "yabrowser" in ua_lower:
+        browser = "Yandex"
+    elif "chrome" in ua_lower or "crios" in ua_lower:
+        browser = "Chrome"
+    elif "firefox" in ua_lower or "fxios" in ua_lower:
+        browser = "Firefox"
+    elif "safari" in ua_lower:
+        browser = "Safari"
+    else:
+        browser = ""
+
+    return f"{device} / {browser}" if browser else device
 
 
-def record_visit(request: Request) -> None:
-    """Пишет заход. Ошибки журнала не должны ронять страницу."""
+def record_visit(request: Request, response: Response) -> None:
+    """Регистрирует заход. Устройство определяется по cookie, не по IP."""
     path = request.url.path
     if any(path.startswith(p) for p in SKIP_PREFIXES):
         return
     try:
+        device_id = request.cookies.get(DEVICE_COOKIE)
+        if not device_id:
+            device_id = uuid.uuid4().hex
+            response.set_cookie(
+                DEVICE_COOKIE, device_id,
+                max_age=DEVICE_COOKIE_TTL, httponly=True, samesite="lax")
+
+        now = int(time.time())
+        ua = (request.headers.get("user-agent") or "")[:400]
+        name = _parse_device_name(ua)
+
+        db.execute(
+            """INSERT INTO devices (device_id, device_name, ua, first_seen, last_seen, visits)
+               VALUES (?,?,?,?,?,1)
+               ON CONFLICT(device_id) DO UPDATE SET
+                   last_seen=excluded.last_seen,
+                   visits=devices.visits+1,
+                   device_name=COALESCE(devices.device_name, excluded.device_name)""",
+            (device_id, name, ua, now, now))
+
         db.execute(
             "INSERT INTO visits (ts, ip, path, ua, ref) VALUES (?,?,?,?,?)",
-            (int(time.time()), client_ip(request), path,
-             (request.headers.get("user-agent") or "")[:300],
+            (now, device_id, path, ua[:300],
              (request.headers.get("referer") or "")[:300]))
     except Exception:
         log.exception("не удалось записать посещение")
@@ -78,7 +145,6 @@ def require_admin(credentials: HTTPBasicCredentials = Depends(security)) -> str:
     if credentials is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Требуется вход",
                             headers={"WWW-Authenticate": "Basic"})
-    # compare_digest — чтобы по времени ответа нельзя было подобрать пароль посимвольно
     ok_user = secrets.compare_digest(credentials.username, ADMIN_USER)
     ok_pass = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
     if not (ok_user and ok_pass):
@@ -87,36 +153,128 @@ def require_admin(credentials: HTTPBasicCredentials = Depends(security)) -> str:
     return credentials.username
 
 
-def _cleanup() -> int:
+def _cleanup() -> None:
     edge = int(time.time()) - RETENTION_DAYS * 86400
-    cur = db.execute("DELETE FROM visits WHERE ts < ?", (edge,))
-    return cur.rowcount if cur else 0
+    db.execute("DELETE FROM visits WHERE ts < ?", (edge,))
+    db.execute("DELETE FROM devices WHERE last_seen < ?", (edge,))
+
+
+def _user_stats() -> dict:
+    """Статистика посещений по устройствам."""
+    now = int(time.time())
+    day_ago = now - 86400
+    week_ago = now - 7 * 86400
+    month_ago = now - 30 * 86400
+    one = lambda sql, p=(): (db.query_one(sql, p) or {"n": 0})["n"]
+
+    return {
+        "total_devices": one("SELECT COUNT(*) n FROM devices"),
+        "today_devices": one("SELECT COUNT(*) n FROM devices WHERE last_seen >= ?", (day_ago,)),
+        "week_devices": one("SELECT COUNT(*) n FROM devices WHERE last_seen >= ?", (week_ago,)),
+        "month_devices": one("SELECT COUNT(*) n FROM devices WHERE last_seen >= ?", (month_ago,)),
+        "today_visits": one("SELECT COUNT(*) n FROM visits WHERE ts >= ?", (day_ago,)),
+        "week_visits": one("SELECT COUNT(*) n FROM visits WHERE ts >= ?", (week_ago,)),
+        "month_visits": one("SELECT COUNT(*) n FROM visits WHERE ts >= ?", (month_ago,)),
+        "total_visits": one("SELECT COUNT(*) n FROM visits"),
+        "registered_users": one("SELECT COUNT(*) n FROM users"),
+        "today_new_devices": one("SELECT COUNT(*) n FROM devices WHERE first_seen >= ?", (day_ago,)),
+    }
+
+
+def _content_stats() -> dict:
+    one = lambda sql, p=(): (db.query_one(sql, p) or {"n": 0})["n"]
+    return {
+        "leagues": one("SELECT COUNT(*) n FROM leagues"),
+        "teams": one("SELECT COUNT(DISTINCT id) n FROM teams"),
+        "fixtures": one("SELECT COUNT(*) n FROM fixtures"),
+        "players_total": one("SELECT COUNT(*) n FROM person_names"),
+        "players_with_photo": one("SELECT COUNT(*) n FROM person_names WHERE photo IS NOT NULL"),
+        "players_checked": one("SELECT COUNT(*) n FROM person_names WHERE checked_at > 0"),
+        "players_found_ru": one("SELECT COUNT(*) n FROM person_names WHERE ru IS NOT NULL"),
+        "odds_active": one("SELECT COUNT(*) n FROM odds WHERE updated_at > ?",
+                           (int(time.time()) - ODDS["max_age"],)),
+    }
+
+
+def _api_stats() -> dict:
+    """Расход запросов и состояние синхронизации."""
+    from app.sync import worker
+    from app.sync.fd_client import fd
+    from app.sync.fdorg import COMPETITIONS
+
+    api_football = budget.stats(worker.active_pools())
+
+    fd_state = worker._fd_state
+    fd_info = {
+        "rate_per_min": FD_SYNC.get("live_interval", 25),
+        "soft_rate": 8,
+        "available_minute": fd.last_available,
+        "live_mode": fd_state.get("live_mode", False),
+        "last_tick": fd_state.get("last_tick", 0),
+        "running": fd_state.get("running", False),
+        "leagues": len(COMPETITIONS),
+    }
+
+    sync_states = {}
+    rows = db.query("SELECT * FROM sync_state ORDER BY key")
+    for r in rows:
+        sync_states[r["key"]] = dict(r)
+
+    return {
+        "api_football": api_football,
+        "fd": fd_info,
+        "sync_states": sync_states,
+    }
+
+
+def _devices_list(limit: int = 100) -> list[dict]:
+    rows = db.query(
+        """SELECT device_id, device_name, first_seen, last_seen, visits
+           FROM devices ORDER BY last_seen DESC LIMIT ?""", (limit,))
+    return [dict(r) for r in rows]
+
+
+def _popular_pages(limit: int = 20) -> list[dict]:
+    day_ago = int(time.time()) - 86400
+    rows = db.query(
+        """SELECT path, COUNT(*) n FROM visits WHERE ts >= ?
+           GROUP BY path ORDER BY n DESC LIMIT ?""", (day_ago, limit))
+    return [dict(r) for r in rows]
 
 
 @router.get("", response_class=HTMLResponse)
-def admin_page(request: Request, _: str = Depends(require_admin), limit: int = 200):
+def admin_page(request: Request, _: str = Depends(require_admin), tab: str = "overview"):
     _cleanup()
-    day = int(time.time()) - 86400
-    week = int(time.time()) - 7 * 86400
-    stats = {
-        "total": db.query_one("SELECT COUNT(*) n FROM visits")["n"],
-        "uniq": db.query_one("SELECT COUNT(DISTINCT ip) n FROM visits")["n"],
-        "day": db.query_one("SELECT COUNT(*) n FROM visits WHERE ts>=?", (day,))["n"],
-        "day_uniq": db.query_one("SELECT COUNT(DISTINCT ip) n FROM visits WHERE ts>=?", (day,))["n"],
-        "week": db.query_one("SELECT COUNT(*) n FROM visits WHERE ts>=?", (week,))["n"],
+
+    data = {
+        "request": request,
+        "page": "admin",
+        "tab": tab,
+        "users": _user_stats(),
+        "content": _content_stats(),
+        "api": _api_stats(),
+        "devices": _devices_list(),
+        "pages": _popular_pages(),
+        "leagues_config": LEAGUES,
+        "intervals": {
+            "api_football_live": SYNC["primary_live_interval"],
+            "api_football_live_other": SYNC["live_interval"],
+            "api_football_fixtures": SYNC["fixtures_today_interval"],
+            "fd_live": FD_SYNC["live_interval"],
+            "fd_standings": FD_SYNC["standings_interval"],
+            "fd_scorers": FD_SYNC["scorers_interval"],
+            "odds": ODDS["interval"],
+            "odds_gap": ODDS["request_gap"],
+            "photos": PHOTOS["interval"],
+            "photos_batch": PHOTOS["batch"],
+            "wikidata": FD_SYNC["names_interval"],
+        },
         "retention": RETENTION_DAYS,
     }
-    visitors = db.query(
-        """SELECT ip, COUNT(*) hits, MAX(ts) last, MIN(ts) first,
-                  COUNT(DISTINCT path) pages
-           FROM visits GROUP BY ip ORDER BY last DESC LIMIT ?""", (limit,))
-    recent = db.query(
-        "SELECT ts, ip, path, ua, ref FROM visits ORDER BY id DESC LIMIT ?", (limit,))
-    pages = db.query(
-        "SELECT path, COUNT(*) n FROM visits GROUP BY path ORDER BY n DESC LIMIT 25")
-    return templates.TemplateResponse("admin.html", {
-        "request": request, "page": "admin", "stats": stats,
-        "visitors": [dict(r) for r in visitors],
-        "recent": [dict(r) for r in recent],
-        "pages": [dict(r) for r in pages],
-    })
+    return templates.TemplateResponse("admin.html", data)
+
+
+@router.get("/api/stats", response_class=HTMLResponse)
+def admin_api_refresh(request: Request, _: str = Depends(require_admin)):
+    """HTMX-совместимый эндпоинт для подгрузки обновлённых данных."""
+    return admin_page(request, _, tab="api")

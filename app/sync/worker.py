@@ -1,30 +1,41 @@
-"""Фоновый воркер: единственный, кто ходит в API. Сайт читает только SQLite.
+"""Фоновые воркеры: единственные, кто ходит в API. Сайт читает только SQLite.
 
-Логика приоритетов на каждом тике:
-  1) live-опрос, если по расписанию сейчас идут матчи;
-  2) расписание на сегодня / вчера-завтра / горизонт +7 дней;
-  3) очередь карточек матчей (её наполняет сайт, когда юзер открывает матч);
-  4) турнирные таблицы по ротации;
-  5) статистика игроков по ротации.
-Всё, что не влезло в дневной бюджет, просто откладывается до завтра.
+Источников два, и у них несовместимые ограничения, поэтому циклов тоже два и
+крутятся они независимо:
+
+  football-data.org — 10 запросов в минуту, суточного потолка нет. Ведёт восемь
+    европейских турниров: живой счёт, расписание, настоящие таблицы, бомбардиров.
+    Опрашивается часто, экономить незачем.
+
+  API-Football — всего 92 запроса в сутки. Бережётся для Лигаи Олӣ и шести лиг,
+    которых у football-data нет. Расход делится на корзины (см. app/budget.py):
+    в день с матчами Лигаи Олӣ ей достаётся 50 запросов на живой счёт, в пустой
+    день они переходят остальным.
+
+Шаги внутри каждого цикла упорядочены по важности, и за один тик выполняется
+максимум один запросоёмкий шаг — так бюджет тратится ровно, без всплесков.
 """
 import asyncio
 import logging
 import time
 
-from app import analytics, budget, db
+from app import analytics, budget, db, photos, wikidata
 from app.api_client import BudgetExceeded, PlanRestricted, api
 from app.config import (BACKFILL_ENABLED, BACKFILL_PER_DAY, DETAILS_PER_DAY,
-                        FIXTURE_DAYS_AHEAD, FIXTURE_DAYS_BEHIND, SYNC,
+                        FD_SYNC, FIXTURE_DAYS_AHEAD, FIXTURE_DAYS_BEHIND,
+                        NATIONAL_TEAM, ODDS, PHOTOS, PRIMARY_LEAGUE_ID, SYNC,
                         USE_API_PLAYER_STATS, USE_API_STANDINGS)
-from app.sync import tasks
+from app.sync import fdorg, national, odds, tasks
+from app.sync.fd_client import fd
 
 log = logging.getLogger("tajscore.worker")
 
 # Очередь карточек матчей: сайт кладёт id, воркер разгребает
 _detail_queue: asyncio.Queue[int] = asyncio.Queue(maxsize=100)
 _queued: set[int] = set()
-_state = {"running": False, "last_tick": 0, "live_mode": False, "last_live": 0}
+_state = {"running": False, "last_tick": 0, "live_mode": False, "last_live": 0,
+          "primary_live": False}
+_fd_state = {"running": False, "last_tick": 0, "live_mode": False, "last_window": 0}
 
 
 def request_detail(fixture_id: int) -> bool:
@@ -44,36 +55,71 @@ def request_detail(fixture_id: int) -> bool:
     return True
 
 
+def active_pools() -> set[str]:
+    """Корзины, которые сегодня вообще могут понадобиться.
+
+    Спящие отдают свою квоту работающим, поэтому набор пересчитывается каждый
+    раз: матч Лигаи Олӣ мог появиться в расписании уже после полуночи.
+    """
+    pools = {"tj", "other"}
+    if tasks.primary_has_matches_today():
+        pools.add("tj_live")
+    return pools
+
+
 def status() -> dict:
-    return {**_state, "queue": _detail_queue.qsize(), "budget": budget.stats(),
+    return {**_state, "queue": _detail_queue.qsize(),
+            "budget": budget.stats(active_pools()),
+            "fd": {**_fd_state, "available_minute": fd.last_available},
             "backfill": tasks.backfill_progress()}
 
 
-# ------------------------------------------------------------------ шаги
+# ------------------------------------------------------------------ общее
 def _due(key: str, interval: int) -> bool:
     return int(time.time()) - db.get_sync_state(key)["last_ok"] >= interval
 
 
+def _spent_on(task: str) -> int:
+    row = db.query_one("SELECT COUNT(*) n FROM api_calls WHERE day=? AND task=? AND error IS NULL",
+                       (budget.today_utc(), task))
+    return row["n"] if row else 0
+
+
+# ================================================================== API-Football
 async def _step_live() -> bool:
-    active = tasks.live_mode_active()
+    """Живой счёт. Частота зависит от того, играет ли сейчас Лигаи Олӣ.
+
+    Запрос ?live=all один и тот же в обоих случаях, разнятся только интервал и
+    корзина, из которой он оплачен.
+    """
+    primary = tasks.primary_live_active()
+    active = primary or tasks.live_mode_active()
     _state["live_mode"] = active
-    interval = SYNC["live_interval"] if active else SYNC["live_idle_interval"]
+    _state["primary_live"] = primary
+
+    if primary:
+        interval, task = SYNC["primary_live_interval"], "tj_live"
+    elif active:
+        interval, task = SYNC["live_interval"], "live"
+    else:
+        interval, task = SYNC["live_idle_interval"], "live"
+
     if int(time.time()) - _state["last_live"] < interval:
         return False
+    _state["last_live"] = int(time.time())
     if not active:
         # матчей нет — тратить запрос незачем, только подчищаем зависшие статусы
-        _state["last_live"] = int(time.time())
         return await tasks.finalize_stale_live() > 0
-    _state["last_live"] = int(time.time())
-    await tasks.sync_live()
+    await tasks.sync_live(task)
     await tasks.finalize_stale_live()
     return True
 
 
 async def _step_fixtures() -> bool:
+    """Расписание. Один запрос по дате отдаёт матчи всего мира, включая Лигаи Олӣ."""
     today = tasks.utc_date(0)
     if _due(f"fixtures:{today}", SYNC["fixtures_today_interval"]):
-        await tasks.sync_fixtures_date(today, "fixtures_today")
+        await tasks.sync_fixtures_date(today, "tj_fixtures")
         return True
     for off in (-1, 1):
         d = tasks.utc_date(off)
@@ -94,7 +140,10 @@ async def _step_details() -> bool:
     fid = await _detail_queue.get()
     _queued.discard(fid)
     try:
-        await tasks.sync_detail(fid)
+        # карточка матча главной лиги оплачивается из её корзины
+        row = db.query_one("SELECT league_id FROM fixtures WHERE id=?", (fid,))
+        primary = bool(row and row["league_id"] == PRIMARY_LEAGUE_ID)
+        await tasks.sync_detail(fid, task="tj_detail" if primary else "detail")
     finally:
         _detail_queue.task_done()
     return True
@@ -132,6 +181,14 @@ async def _step_backfill_dates() -> bool:
     return True
 
 
+async def _step_national_team() -> bool:
+    """Матчи сборной Таджикистана — раз в 12 часов."""
+    if not _due("national_team", NATIONAL_TEAM["interval"]):
+        return False
+    await national.sync()
+    return True
+
+
 async def _step_backfill_details() -> bool:
     """Остатками бюджета добираем события матчей: из них считаются бомбардиры."""
     if budget.remaining() <= 25 or _spent_on("detail") >= DETAILS_PER_DAY:
@@ -153,12 +210,6 @@ def _mark_blocked(step_name: str) -> None:
                 db.mark_sync(f"fixtures:{d}", ok=True, note="закрыто тарифом")
 
 
-def _spent_on(task: str) -> int:
-    row = db.query_one("SELECT COUNT(*) n FROM api_calls WHERE day=? AND task=? AND error IS NULL",
-                       (budget.today_utc(), task))
-    return row["n"] if row else 0
-
-
 def _recompute_if_due() -> None:
     """Локальный пересчёт таблиц и статистики игроков. Запросов не тратит."""
     if int(time.time()) - db.get_sync_state("recompute")["last_ok"] < 600:
@@ -171,7 +222,7 @@ def _recompute_if_due() -> None:
 
 
 STEPS = (_step_live, _step_fixtures, _step_details, _step_standings, _step_players,
-         _step_backfill_dates, _step_backfill_details)
+         _step_national_team, _step_backfill_dates, _step_backfill_details)
 
 
 async def tick() -> None:
@@ -193,7 +244,7 @@ async def tick() -> None:
 
 async def run_forever() -> None:
     _state["running"] = True
-    log.info("Воркер запущен. Бюджет на сегодня: %s", budget.stats())
+    log.info("Воркер API-Football запущен. Бюджет: %s", budget.stats(active_pools()))
     try:
         while True:
             _state["last_tick"] = int(time.time())
@@ -201,8 +252,139 @@ async def run_forever() -> None:
             _recompute_if_due()
             await asyncio.sleep(SYNC["tick"])
     except asyncio.CancelledError:
-        log.info("Воркер остановлен")
+        log.info("Воркер API-Football остановлен")
         raise
     finally:
         _state["running"] = False
         await api.close()
+
+
+# ================================================================== football-data.org
+async def _fd_step_window() -> bool:
+    """Живой счёт и ближайшее расписание всех восьми лиг — одним запросом.
+
+    Когда матчи идут, опрашиваем раз в полминуты: счёт у них приходит с
+    задержкой, и единственное, что мы можем сделать, — показать его сразу, как
+    только он появится.
+    """
+    active = _fd_live_active()
+    _fd_state["live_mode"] = active
+    interval = FD_SYNC["live_interval"] if active else FD_SYNC["live_idle_interval"]
+    if int(time.time()) - _fd_state["last_window"] < interval:
+        return False
+    _fd_state["last_window"] = int(time.time())
+    await fdorg.sync_window(days_back=1, days_fwd=7)
+    return True
+
+
+def _fd_live_active() -> bool:
+    """Идут ли матчи в лигах football-data прямо сейчас."""
+    return tasks._matches_in_window(list(fdorg.COMPETITIONS)) > 0
+
+
+async def _fd_step_standings() -> bool:
+    lid = _fd_pick_stale("standings", FD_SYNC["standings_interval"])
+    if lid is None:
+        return False
+    await fdorg.import_standings(lid)
+    return True
+
+
+async def _fd_step_scorers() -> bool:
+    lid = _fd_pick_stale("fdorg:scorers", FD_SYNC["scorers_interval"])
+    if lid is None:
+        return False
+    await fdorg.import_scorers(lid)
+    return True
+
+
+async def _fd_step_season() -> bool:
+    """Полное расписание сезона: ловит переносы матчей, которых нет в окне дат."""
+    lid = _fd_pick_stale("fdorg:matches", FD_SYNC["season_interval"])
+    if lid is None:
+        return False
+    await fdorg.import_matches(lid)
+    return True
+
+
+def _fd_pick_stale(prefix: str, interval: int) -> int | None:
+    """Лига с самыми старыми данными, отстоявшимися дольше интервала."""
+    now = int(time.time())
+    best, best_ts = None, None
+    for lid in fdorg.COMPETITIONS:
+        ts = db.get_sync_state(f"{prefix}:{lid}")["last_ok"]
+        if now - ts < interval:
+            continue
+        if best_ts is None or ts < best_ts:
+            best, best_ts = lid, ts
+    return best
+
+
+async def _fd_step_names() -> bool:
+    """Русские написания имён новых игроков.
+
+    Живёт в цикле football-data, потому что к обоим футбольным API отношения не
+    имеет и их лимитов не тратит: Wikidata — открытый источник. Берём маленькими
+    порциями, чтобы не держать цикл и не частить чужим API.
+    """
+    if not _due("wikidata:names", FD_SYNC["names_interval"]):
+        return False
+    todo = wikidata.pending(40)
+    db.mark_sync("wikidata:names", ok=True, note=f"{len(todo)} новых")
+    if not todo:
+        return False
+    await wikidata.resolve_many(todo)
+    return True
+
+
+
+async def _fd_step_odds() -> bool:
+    """Коэффициенты букмекера. Живут в этом цикле, потому что к футбольным API
+    отношения не имеют и их суточных лимитов не тратят."""
+    if not ODDS["enabled"] or not _due("odds", ODDS["interval"]):
+        return False
+    db.mark_sync("odds", ok=True, note="проверка")
+    await odds.sync()
+    return True
+
+
+
+async def _fd_step_photos() -> bool:
+    """Портреты игроков с Викисклада. Тоже вне футбольных API и их лимитов."""
+    if not PHOTOS["enabled"] or not _due("photos", PHOTOS["interval"]):
+        return False
+    db.mark_sync("photos", ok=True, note="проверка")
+    r = await photos.sync(PHOTOS["batch"])
+    db.mark_sync("photos", ok=True, note=f"проверено {r['checked']}, загружено {r['found']}")
+    return r["checked"] > 0
+
+
+FD_STEPS = (_fd_step_window, _fd_step_standings, _fd_step_scorers, _fd_step_season,
+            _fd_step_names, _fd_step_odds, _fd_step_photos)
+
+
+async def fd_tick() -> None:
+    for step in FD_STEPS:
+        try:
+            if await step():
+                return
+        except Exception:
+            log.exception("Ошибка в шаге football-data %s", step.__name__)
+
+
+async def fd_run_forever() -> None:
+    _fd_state["running"] = True
+    log.info("Воркер football-data запущен (лиг: %s)", len(fdorg.COMPETITIONS))
+    try:
+        while True:
+            _fd_state["last_tick"] = int(time.time())
+            await fd_tick()
+            await asyncio.sleep(FD_SYNC["tick"])
+    except asyncio.CancelledError:
+        log.info("Воркер football-data остановлен")
+        raise
+    finally:
+        _fd_state["running"] = False
+        await fd.close()
+        await odds.fetcher.close()
+        await photos.fetcher.close()

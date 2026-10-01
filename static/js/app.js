@@ -20,14 +20,14 @@ window.App = (function () {
     });
     const lang = Settings.get().lang;
     box.innerHTML = sorted.map(l => {
-      const name = lang === "tg" ? l.name_tg : l.name_ru;
-      const country = lang === "tg" ? l.country_tg : l.country_ru;
+      const name = pick(l, "name");
+      const country = pick(l, "country");
       const isFav = favs.includes(l.id);
       const badge = l.live_count
         ? `<span class="league-item__badge league-item__badge--live">${l.live_count}</span>`
         : (l.today_count ? `<span class="league-item__badge">${l.today_count}</span>` : "");
       return `<a class="league-item${activeId === l.id ? " is-active" : ""}" href="/league/${l.id}">
-        ${UI.logo(l.flag || l.logo, "league-item__flag", country)}
+        ${UI.logo(UI.leagueIcon(l), "league-item__flag", country)}
         <div class="league-item__text">
           <div class="league-item__name">${esc(name)}</div>
           <div class="league-item__country">${esc(country)}</div>
@@ -96,8 +96,8 @@ window.App = (function () {
           if (r.leagues.length) html += `<div class="search__group">
             <div class="search__label">${esc(t("search.leagues"))}</div>` +
             r.leagues.map(l => `<a class="search__item" href="/league/${l.id}">
-              ${UI.logo(l.logo, "", "")}<span>${esc(lang === "tg" ? l.name_tg : l.name_ru)}</span>
-              <small>${esc(lang === "tg" ? l.country_tg : l.country_ru)}</small></a>`).join("") + `</div>`;
+              ${UI.logo(l.logo, "", "")}<span>${esc(pick(l, "name"))}</span>
+              <small>${esc(pick(l, "country"))}</small></a>`).join("") + `</div>`;
           if (r.teams.length) html += `<div class="search__group">
             <div class="search__label">${esc(t("search.teams"))}</div>` +
             r.teams.map(x => `<a class="search__item" href="/team/${x.id}">
@@ -144,7 +144,7 @@ window.App = (function () {
   function initSettings() {
     const drawer = $("#drawer"), overlay = $("#overlay");
     const open = () => { drawer.classList.add("is-open"); overlay.classList.add("is-open");
-                         drawer.setAttribute("aria-hidden", "false"); loadStatus(); };
+                         drawer.setAttribute("aria-hidden", "false"); };
     openSettings = open;
     const close = () => { drawer.classList.remove("is-open"); overlay.classList.remove("is-open");
                           drawer.setAttribute("aria-hidden", "true"); };
@@ -157,8 +157,12 @@ window.App = (function () {
     const segs = [["#segTheme", "theme"], ["#segLang", "lang"], ["#segTimeFmt", "timeFormat"]];
     segs.forEach(([sel, key]) => {
       const el = $(sel); if (!el) return;
+      // У темы хранится ещё и «auto» — подсвечиваем то, что видно на экране,
+      // иначе в режиме «как в системе» не горела бы ни одна кнопка.
+      const current = () => key === "theme"
+        ? Settings.resolvedTheme() : String(Settings.get()[key]);
       const sync = () => el.querySelectorAll("button").forEach(b =>
-        b.classList.toggle("is-active", b.dataset.val === String(Settings.get()[key])));
+        b.classList.toggle("is-active", b.dataset.val === current()));
       el.addEventListener("click", e => {
         const b = e.target.closest("button"); if (!b) return;
         Settings.set({ [key]: b.dataset.val });
@@ -166,6 +170,9 @@ window.App = (function () {
         document.dispatchEvent(new CustomEvent("tajscore:settings"));
       });
       sync();
+      // Настройки могут поменяться и помимо клика — например, человек переключил
+      // тёмный режим в телефоне, пока страница открыта.
+      Settings.onChange(sync);
     });
 
     // часовой пояс
@@ -197,28 +204,16 @@ window.App = (function () {
       const on = Settings.isFavLeague(l.id);
       return `<div class="fav-row" data-fav-league="${l.id}">
         ${UI.logo(l.logo, "", "")}
-        <span>${esc(lang === "tg" ? l.name_tg : l.name_ru)}</span>
+        <span>${esc(pick(l, "name"))}</span>
         <span class="fav-row__star${on ? " is-on" : ""}">${UI.starSvg(on)}</span>
       </div>`;
     }).join("");
   }
 
-  async function loadStatus() {
-    try {
-      const s = await API.status();
-      const b = s.budget;
-      $("#statusLine").innerHTML =
-        `${esc(t("status.fixtures"))}: <b class="mono">${s.db.fixtures}</b><br>` +
-        `${esc(t("status.teams"))}: <b class="mono">${s.db.teams}</b><br>` +
-        `${esc(t("status.requests"))}: <b class="mono">${b.used}/${b.hard_limit}</b><br>` +
-        `${esc(t("status.sync"))}: <b>${esc(t(s.worker.running ? "status.sync.on" : "status.sync.off"))}</b>` +
-        (s.worker.live_mode ? ` · ${esc(t("status.livemode"))}` : "");
-    } catch (e) { $("#statusLine").textContent = "—"; }
-  }
-
   /* ------------------------------------------------------------- мобильная навигация */
   function initMobile() {
     const left = $("#colLeft");
+    document.body.dataset.section = "matches";
     $("#btnLeagues")?.addEventListener("click", () => {
       left.classList.toggle("is-open");
       $("#btnLeagues").classList.toggle("is-active", left.classList.contains("is-open"));
@@ -227,6 +222,7 @@ window.App = (function () {
       const b = e.target.closest("button"); if (!b) return;
       $("#mobnav").querySelectorAll("button").forEach(x => x.classList.toggle("is-active", x === b));
       const nav = b.dataset.nav;
+      document.body.dataset.section = nav;
       left.classList.toggle("is-open", nav === "leagues");
       if (nav === "live" && window.Home) Home.setTab("live");
       if (nav === "matches" && window.Home) Home.setTab("today");
@@ -274,7 +270,6 @@ window.App = (function () {
     document.addEventListener("tajscore:settings", () => {
       applyI18n();
       renderTz();
-      loadStatus();
       renderLeagues(window.__activeLeagueId);
       renderPopular();
       renderFavorites();

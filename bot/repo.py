@@ -89,22 +89,48 @@ async def find_users(term: str) -> list[dict]:
 
 def _csv_bytes() -> bytes:
     rows = db.query("SELECT * FROM users ORDER BY created_at")
-    buf = io.StringIO()
-    w = csv.writer(buf, delimiter=";")   # ; — чтобы Excel открыл без «Импорта данных»
-    w.writerow(["telegram_id", "имя", "username", "phone",
-                "дата регистрации", "уведомления", "последний вход"])
+    lines: list[str] = []
+    data = []
     for r in rows:
-        w.writerow([
-            r["telegram_id"],
-            r["display_name"],
-            f"@{r['username']}" if r["username"] else "",
-            r["phone"] or "",
-            fmt_ts(r["created_at"]),
-            "вкл" if r["notifications_enabled"] else "выкл",
-            fmt_ts(r["last_login"]),
-        ])
-    # BOM — иначе Excel под Windows покажет кириллицу кракозябрами
-    return buf.getvalue().encode("utf-8-sig")
+        data.append({
+            "name": r["display_name"] or "—",
+            "user": f"@{r['username']}" if r["username"] else "—",
+            "phone": r["phone"] or "—",
+            "reg": fmt_ts(r["created_at"]) or "—",
+            "notif": "вкл" if r["notifications_enabled"] else "выкл",
+            "last": fmt_ts(r["last_login"]) or "—",
+        })
+    if not data:
+        return "Пользователей нет.".encode("utf-8-sig")
+    w_name = max(len(d["name"]) for d in data)
+    w_user = max(len(d["user"]) for d in data)
+    w_phone = max(len(d["phone"]) for d in data)
+    w_reg = max(len(d["reg"]) for d in data)
+    w_name = max(w_name, 6)
+    w_user = max(w_user, 8)
+    gap = "    "
+    header = (
+        f"{'Имя':<{w_name}}{gap}"
+        f"{'Юзернейм':<{w_user}}{gap}"
+        f"{'Телефон':<{w_phone}}{gap}"
+        f"{'Регистрация':<{w_reg}}{gap}"
+        f"{'Увед.':<5}{gap}"
+        f"Последний вход"
+    )
+    lines.append(header)
+    lines.append("─" * len(header))
+    for d in data:
+        lines.append(
+            f"{d['name']:<{w_name}}{gap}"
+            f"{d['user']:<{w_user}}{gap}"
+            f"{d['phone']:<{w_phone}}{gap}"
+            f"{d['reg']:<{w_reg}}{gap}"
+            f"{d['notif']:<5}{gap}"
+            f"{d['last']}"
+        )
+    lines.append("─" * len(header))
+    lines.append(f"Всего: {len(data)}")
+    return "\r\n".join(lines).encode("utf-8-sig")
 
 
 async def csv_bytes() -> bytes:

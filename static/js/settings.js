@@ -2,7 +2,7 @@
 (function () {
   const KEY = "tajscore.settings";
   const DEFAULTS = {
-    theme: "dark",
+    theme: "auto",   // "auto" = как в системе; явный выбор человека сильнее
     lang: "ru",
     tz: "Asia/Dushanbe",
     timeFormat: "24",
@@ -41,16 +41,38 @@
     listeners.forEach(fn => fn(state));
   }
 
+  /* Тема, которую реально видно. Пока человек не выбрал сам, идём за системой:
+     на телефоне с тёмным режимом сайт тоже тёмный, иначе светлый. */
+  function resolvedTheme() {
+    if (state.theme === "dark" || state.theme === "light") return state.theme;
+    try {
+      return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    } catch (e) { return "light"; }
+  }
+
   function apply() {
-    document.documentElement.dataset.theme = state.theme;
+    const theme = resolvedTheme();
+    document.documentElement.dataset.theme = theme;
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = state.theme === "dark" ? "#060A12" : "#EFF2F8";
+    if (meta) meta.content = theme === "dark" ? "#060A12" : "#EFF2F8";
     if (window.applyI18n) applyI18n();
   }
+
+  /* Человек переключил режим в системе — подхватываем на лету, но только если
+     он не выбирал тему руками. */
+  try {
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+      if (state.theme === "auto") {
+        apply();
+        listeners.forEach(fn => fn(state));
+      }
+    });
+  } catch (e) { /* старый браузер — останется тема первой загрузки */ }
 
   window.Settings = {
     TIMEZONES,
     get: () => state,
+    resolvedTheme,
     set(patch) { Object.assign(state, patch); save(); },
     onChange(fn) { listeners.push(fn); },
 
@@ -86,6 +108,12 @@
       save();
     },
 
+    /* Локаль для Intl: от неё зависят названия месяцев и порядок дня с месяцем.
+       Для таджикского в браузерах нет данных, поэтому берём русскую — написание
+       цифр и сокращений там то же самое. */
+    locale() {
+      return state.lang === "en" ? "en-GB" : "ru-RU";
+    },
     /* Время матча в часовом поясе пользователя */
     formatTime(ts) {
       const opts = {
@@ -93,7 +121,7 @@
         hour12: state.timeFormat === "12",
         timeZone: state.tz
       };
-      try { return new Intl.DateTimeFormat("ru-RU", opts).format(new Date(ts * 1000)); }
+      try { return new Intl.DateTimeFormat(this.locale(), opts).format(new Date(ts * 1000)); }
       catch (e) { return new Date(ts * 1000).toISOString().slice(11, 16); }
     },
     /* Матч идёт сегодня — по календарю часового пояса пользователя */
@@ -107,14 +135,14 @@
     /* Короткая дата ДД.ММ в часовом поясе пользователя */
     formatDayMonth(ts) {
       try {
-        return new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit",
+        return new Intl.DateTimeFormat(this.locale(), { day: "2-digit", month: "2-digit",
           timeZone: state.tz }).format(new Date(ts * 1000));
       } catch (e) { return ""; }
     },
     formatDate(ts, withYear) {
       const opts = { day: "2-digit", month: "short", timeZone: state.tz };
       if (withYear) opts.year = "numeric";
-      try { return new Intl.DateTimeFormat("ru-RU", opts).format(new Date(ts * 1000)); }
+      try { return new Intl.DateTimeFormat(this.locale(), opts).format(new Date(ts * 1000)); }
       catch (e) { return ""; }
     }
   };

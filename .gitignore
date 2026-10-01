@@ -23,5 +23,8 @@ data/tajscore.db-wal
 .DS_Store
 Thumbs.db
 
+# Player photos (downloaded at runtime from Wikidata)
+static/players/
+
 # Claude
 .claude/

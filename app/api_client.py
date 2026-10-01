@@ -19,6 +19,15 @@ class PlanRestricted(RuntimeError):
     """Тариф не даёт доступа к этому сезону/дате — повторять бессмысленно."""
 
 
+def _active_pools() -> set[str] | None:
+    """Импорт отложен: worker тянет api_client, прямой импорт замкнул бы круг."""
+    try:
+        from app.sync.worker import active_pools
+        return active_pools()
+    except Exception:
+        return None
+
+
 class ApiClient:
     def __init__(self) -> None:
         self._client: httpx.AsyncClient | None = None
@@ -45,8 +54,11 @@ class ApiClient:
         иначе счётчик может обогнать лимит.
         """
         async with self._lock:
-            if not force and not budget.can_spend(task):
-                log.warning("Бюджет исчерпан, пропускаю %s %s", task, endpoint)
+            # Набор активных корзин спрашиваем у воркера: он знает, играет ли
+            # сегодня Лигаи Олӣ, и значит — кому достаётся простаивающая квота.
+            if not force and not budget.can_spend(task, _active_pools()):
+                log.warning("Бюджет корзины %s исчерпан, пропускаю %s %s",
+                            budget.pool_of(task), task, endpoint)
                 return None
             if not API_KEY:
                 log.error("API_FOOTBALL_KEY не задан")

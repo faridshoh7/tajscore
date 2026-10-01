@@ -1,5 +1,8 @@
 """Страница матча: события, статистика, составы, форма команд, личные встречи."""
 from app import db
+from app import wikidata
+from app.services import league as league_svc
+from app.sync import odds as odds_svc
 from app import teams_tj
 from app.services.common import (FINISHED_STATUSES, FIXTURE_SELECT, fixture_row,
                                  league_info, phase)
@@ -36,7 +39,15 @@ def get_match(fixture_id: int) -> dict | None:
     m["referee"] = row["referee"]
     m["venue"] = row["venue_name"]
     m["venue_city"] = row["venue_city"]
+    m["venue_capacity"] = row["venue_capacity"]
     m["detail_synced_at"] = row["detail_synced_at"]
+    # Таблица лиги прямо на странице матча — как у Flashscore. У турниров с
+    # группами оставляем только ту, где играют эти две команды: остальные
+    # к матчу отношения не имеют.
+    m["standings"] = _relevant_standings(row["league_id"], row["home_id"], row["away_id"])
+    # Коэффициенты показываем только до начала матча: во время игры и после неё
+    # они бессмысленны, а устаревшая цена хуже прочерка.
+    m["odds"] = odds_svc.get(fixture_id) if m["phase"] == "scheduled" else None
     m["events"] = get_events(fixture_id)
     m["statistics"] = get_statistics(fixture_id, row["home_id"], row["away_id"])
     m["lineups"] = get_lineups(fixture_id, row["home_id"], row["away_id"])
@@ -44,6 +55,19 @@ def get_match(fixture_id: int) -> dict | None:
                  "away": team_form(row["away_id"], row["timestamp"])}
     m["h2h"] = head_to_head(row["home_id"], row["away_id"], fixture_id)
     return m
+
+
+
+def _relevant_standings(league_id: int, home_id: int, away_id: int) -> list[dict]:
+    try:
+        groups = league_svc.standings(league_id)
+    except Exception:
+        return []
+    if len(groups) <= 1:
+        return groups
+    here = [g for g in groups
+            if any(r["team_id"] in (home_id, away_id) for r in g["rows"])]
+    return here or groups[:1]
 
 
 def get_events(fixture_id: int) -> list[dict]:
@@ -70,10 +94,26 @@ def get_events(fixture_id: int) -> list[dict]:
             "type": r["type"], "detail": r["detail"], "comments": r["comments"],
             "team_id": r["team_id"], "team_name": tm["name"],
             "team_name_tg": tm["name_tg"], "team_logo": tm["logo"],
-            "player": {"id": r["player_id"], "name": r["player_name"]},
-            "assist": {"id": r["assist_id"], "name": r["assist_name"]},
+            "player": _person(r["player_id"], r["player_name"]),
+            "assist": _person(r["assist_id"], r["assist_name"]),
         })
     return out
+
+
+
+def _person(pid, latin: str | None) -> dict:
+    """Имя человека в обоих написаниях — язык выбирает фронт (tname).
+    Нет перевода в кэше — обе формы останутся латиницей из API."""
+    return {"id": pid, "name": wikidata.localize(latin, "ru"),
+            "name_tg": wikidata.localize(latin, "tg"), "name_en": latin}
+
+
+def _player_row(p) -> dict:
+    d = dict(p)
+    d["name_en"] = d.get("name")
+    d["name"] = wikidata.localize(d["name_en"], "ru")
+    d["name_tg"] = wikidata.localize(d["name_en"], "tg")
+    return d
 
 
 def get_statistics(fixture_id: int, home_id: int, away_id: int) -> list[dict]:
@@ -107,8 +147,8 @@ def get_lineups(fixture_id: int, home_id: int, away_id: int) -> dict:
             "team_id": tid,
             "formation": head["formation"] if head else None,
             "coach": head["coach_name"] if head else None,
-            "start": [dict(p) for p in players if p["is_start"]],
-            "bench": [dict(p) for p in players if not p["is_start"]],
+            "start": [_player_row(p) for p in players if p["is_start"]],
+            "bench": [_player_row(p) for p in players if not p["is_start"]],
         }
     return out
 

@@ -70,24 +70,29 @@ def start(request: Request, response: Response):
         _set_cookie(request, response, session_id)
 
     data = auth.create_login_token(session_id)
-    return {"already": False, **data}
+    return {"already": False, "sid": session_id, **data}
 
 
 @router.get("/poll")
-def poll(request: Request, token: str):
+def poll(request: Request, response: Response, token: str, sid: str | None = None):
     """Сайт опрашивает этот метод, пока человек ходит в бота.
 
     Статусы: pending — ждём Start; ok — вошли; expired — 5 минут истекли;
     unknown — токен не наш или уже израсходован.
+
+    sid — запасной идентификатор сессии (Edge и некоторые браузеры не отправляют
+    cookie обратно на duckdns-поддоменах).
     """
-    session_id = _session_id(request)
+    session_id = _session_id(request) or sid
     row = auth.get_login_token(token)
     if not row or row["session_id"] != session_id:
         return {"status": "unknown"}
     if row["used"]:
-        # токен мог быть отработан параллельной вкладкой — смотрим, вошли ли уже
-        user = current_user(request)
-        return {"status": "ok", "user": auth.public_user(user)} if user else {"status": "unknown"}
+        user = auth.session_user(row["session_id"])
+        if user:
+            _set_cookie(request, response, row["session_id"])
+            return {"status": "ok", "user": auth.public_user(user)}
+        return {"status": "unknown"}
     if not row["confirmed"]:
         if row["expires_at"] < int(time.time()):
             return {"status": "expired"}
@@ -96,6 +101,7 @@ def poll(request: Request, token: str):
     user = auth.claim_login_token(token, session_id)
     if not user:
         return {"status": "expired"}
+    _set_cookie(request, response, row["session_id"])
     log.info("вход: telegram_id=%s", user["telegram_id"])
     return {"status": "ok", "user": auth.public_user(user)}
 

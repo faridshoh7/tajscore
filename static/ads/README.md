@@ -22,12 +22,12 @@
 
 | Версия | Размер места (CSS) | Пропорция | Файл делайте | Макс. вес |
 |---|---|---|---|---|
-| **Компьютер** (ширина экрана ≥ 861 px) | **1200 × 150 px** | **8 : 1** | **2400 × 300 px** (@2x) | видео ≤ 6 МБ |
-| **Телефон** (ширина экрана ≤ 860 px) | **640 × 200 px** | **16 : 5** (3.2 : 1) | **1280 × 400 px** (@2x) | видео ≤ 3 МБ |
+| **Компьютер** (ширина экрана ≥ 861 px) | **1200 × 171 px** | **7 : 1** | **2400 × 342 px** (@2x) | видео ≤ 6 МБ |
+| **Телефон** (ширина экрана ≤ 860 px) | **640 × 240 px** | **8 : 3** (2.67 : 1) | **1280 × 480 px** (@2x) | видео ≤ 3 МБ |
 
 Важное про пропорции: блок растягивается по ширине экрана, а высота считается
-из пропорции. Поэтому **главное — попасть в пропорцию 8:1 (компьютер) и
-16:5 (телефон)**, а не в пиксели один в один. Ролик 2400×300 на узком ноутбуке
+из пропорции. Поэтому **главное — попасть в пропорцию 7:1 (компьютер) и
+8:3 (телефон)**, а не в пиксели один в один. Ролик 2400×342 на узком ноутбуке
 просто уменьшится целиком, ничего не обрежется.
 
 ### Требования к видео
@@ -43,15 +43,15 @@
 Готовый рецепт пережатия (ffmpeg):
 
 ```bash
-# компьютер: 2400x300
-ffmpeg -i source.mp4 -vf "scale=2400:300:force_original_aspect_ratio=increase,crop=2400:300" \
+# компьютер: 2400x342
+ffmpeg -i source.mp4 -vf "scale=2400:342:force_original_aspect_ratio=increase,crop=2400:342" \
   -an -c:v libx264 -profile:v high -pix_fmt yuv420p -crf 26 -movflags +faststart \
   static/ads/moyareklama-desktop.mp4
 ffmpeg -i static/ads/moyareklama-desktop.mp4 -vframes 1 -q:v 3 \
   static/ads/moyareklama-desktop.jpg
 
-# телефон: 1280x400
-ffmpeg -i source.mp4 -vf "scale=1280:400:force_original_aspect_ratio=increase,crop=1280:400" \
+# телефон: 1280x480
+ffmpeg -i source.mp4 -vf "scale=1280:480:force_original_aspect_ratio=increase,crop=1280:480" \
   -an -c:v libx264 -profile:v high -pix_fmt yuv420p -crf 26 -movflags +faststart \
   static/ads/moyareklama-mobile.mp4
 ffmpeg -i static/ads/moyareklama-mobile.mp4 -vframes 1 -q:v 3 \
@@ -61,7 +61,7 @@ ffmpeg -i static/ads/moyareklama-mobile.mp4 -vframes 1 -q:v 3 \
 ### Картинка вместо видео
 
 Можно и просто картинку — `.jpg`, `.png` или `.webp`, те же размеры
-(2400 × 300 и 1280 × 400). Укажите `"type": "image"`.
+(2400 × 342 и 1280 × 480). Укажите `"type": "image"`.
 
 ---
 

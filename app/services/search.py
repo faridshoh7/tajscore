@@ -6,17 +6,52 @@ from app.services.common import FIXTURE_SELECT, fixture_row, league_info
 
 
 def _tj_ids(q: str) -> list[int]:
-    """id клубов Лигаи Олӣ, подходящих под кириллический запрос.
+    """id команд, чьё русское или таджикское название подходит под запрос.
 
-    В таблице teams клуб хранится как «Istiqlol», поэтому запрос «Истиклол»
-    обычным LIKE не находится. Прогоняем список команд через справочник и
-    возвращаем id тех, чьё русское или таджикское имя совпало.
+    В таблице teams команда хранится латиницей («Istiqlol», «Bayern München»),
+    поэтому запрос «Истиклол» или «Бавария» обычным LIKE не находится.
+    Прогоняем список через справочник имён и сверяем уже кириллицу.
+
+    Сравнение идёт через _fold: он гасит разницу «Ҳосилот»/«Хосилот», так что
+    таджикский запрос находит клуб с русским написанием и наоборот.
     """
-    slugs = teams_tj.slugs_matching(q)
-    if not slugs:
+    q = teams_tj._fold(q)
+    if len(q) < 2:
         return []
-    return [r["id"] for r in db.query("SELECT id, name FROM teams")
-            if teams_tj.slug_for(r["id"], r["name"]) in slugs]
+    out = []
+    for r in db.query("SELECT id, name FROM teams"):
+        ru, tg, en = teams_tj.names(r["id"], r["name"])
+        # Английский тоже ищем: латинский запрос «Bayern» должен находить Баварию
+        if q in teams_tj._fold(ru) or q in teams_tj._fold(tg) or q in en.lower():
+            out.append(r["id"])
+    return out
+
+
+def _teams(like: str, tj_ids: list[int], tj_in: str, q: str, limit: int) -> list[dict]:
+    """Команды под запрос: без дублей и с совпадением по началу слова вверху.
+
+    Один клуб приходит из двух источников под разными латинскими именами
+    («Man City» и «Manchester City»), и в базе это две строки. Русское название
+    у них одно, поэтому схлопываем по нему — иначе в подсказке будет две
+    одинаковых строки. Из пары оставляем ту, у которой есть эмблема.
+    """
+    rows = db.query(
+        f"""SELECT DISTINCT t.id, t.name, t.logo FROM teams t
+           JOIN fixtures f ON (f.home_id=t.id OR f.away_id=t.id)
+           WHERE t.name LIKE ? OR t.id IN ({tj_in})""",
+        (like, *tj_ids))
+    best: dict[str, dict] = {}
+    for r in rows:
+        out = teams_tj.team_out(r["id"], r["name"], r["logo"])
+        prev = best.get(out["name"])
+        if prev is None or (not prev.get("logo") and out.get("logo")):
+            best[out["name"]] = out
+    fq = teams_tj._fold(q)
+    # «Реал» должен поднять Реал Мадрид выше Монреаля: сначала совпадения
+    # с начала названия, потом всё остальное, внутри группы — по алфавиту
+    return sorted(best.values(),
+                  key=lambda t: (not teams_tj._fold(t["name"]).startswith(fq),
+                                 t["name"]))[:limit]
 
 
 def search(q: str, limit: int = 12) -> dict:
@@ -31,11 +66,7 @@ def search(q: str, limit: int = 12) -> dict:
     leagues = [league_info(r["id"]) for r in db.query(
         "SELECT id FROM leagues WHERE name_ru LIKE ? OR name_tg LIKE ? OR name LIKE ? OR country_ru LIKE ? ORDER BY priority LIMIT ?",
         (like, like, like, like, limit))]
-    teams = [teams_tj.team_out(r["id"], r["name"], r["logo"]) for r in db.query(
-        f"""SELECT DISTINCT t.id, t.name, t.logo FROM teams t
-           JOIN fixtures f ON (f.home_id=t.id OR f.away_id=t.id)
-           WHERE t.name LIKE ? OR t.id IN ({tj_in}) ORDER BY t.name LIMIT ?""",
-        (like, *tj_ids, limit))]
+    teams = _teams(like, tj_ids, tj_in, q, limit)
     ids = ",".join("?" * len(LEAGUE_IDS))
     matches = [fixture_row(r) for r in db.query(
         f"""{FIXTURE_SELECT} WHERE f.league_id IN ({ids})

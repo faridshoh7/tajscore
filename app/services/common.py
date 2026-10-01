@@ -91,7 +91,8 @@ def league_info(league_id: int) -> dict | None:
     return {
         "id": r["id"], "name": r["name_ru"], "name_ru": r["name_ru"], "name_tg": r["name_tg"],
         "name_en": r["name"], "country": r["country_ru"], "country_ru": r["country_ru"],
-        "country_tg": r["country_tg"], "logo": r["logo"], "flag": r["flag"],
+        "country_tg": r["country_tg"], "country_en": cfg.get("country_en") or r["country"],
+        "logo": r["logo"], "flag": r["flag"],
         "season": r["season"], "is_cup": bool(r["is_cup"]), "group_stage": bool(r["group_stage"]),
         "priority": r["priority"], "code": r["code"],
         "zones": TABLE_ZONES.get(league_id, {}),

@@ -2,11 +2,16 @@
 
 Нужен потому, что бесплатный тариф API не отдаёт /standings и /players/* по текущему
 сезону. Считаем по сыгранным матчам (fixtures) и событиям (fixture_events).
+
+Восемь лиг, которые ведёт football-data.org, здесь НЕ пересчитываются: оттуда
+приходит настоящая таблица, со снятыми очками и техническими результатами,
+а локальный расчёт их не знает и только испортил бы её.
 """
 import time
 
 from app import db
 from app.config import LEAGUE_BY_ID, LEAGUE_IDS, SEASON_BY_LEAGUE
+from app.sync.fdorg import COMPETITIONS as FD_COMPETITIONS
 
 RESULT_STATUSES = ("FT", "AET", "PEN")
 
@@ -172,7 +177,7 @@ def recompute_all(only_league: int | None = None) -> dict:
     for lid in ([only_league] if only_league else LEAGUE_IDS):
         result[lid] = {
             "league": LEAGUE_BY_ID[lid]["name_ru"],
-            "standings": compute_standings(lid),
+            "standings": None if lid in FD_COMPETITIONS else compute_standings(lid),
             "players": compute_player_stats(lid),
         }
     return result

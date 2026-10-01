@@ -168,6 +168,9 @@ window.Home = (function () {
   }
 
   function setTab(name, date) {
+    // «Матчи» в нижней навигации просит сегодняшний день, а не отдельную вкладку:
+    // своей кнопки у него нет, и без этого лента дат осталась бы без подсветки
+    if (name === "today") { name = "date"; date = todayInTz(); }
     tab = name;
     if (name === "date") curDate = date;
     document.querySelectorAll("#tabs .tab").forEach(b => {

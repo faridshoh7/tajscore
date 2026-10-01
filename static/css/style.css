@@ -414,8 +414,8 @@ img, video, svg, canvas, iframe { display: block; max-width: 100%; }
    список матчей и уезжает вверх при прокрутке.
 
    Размеры (их же отдаёт /api/ads, подробности — static/ads/README.md):
-     компьютер — 1200×150 CSS-пикселей, пропорция 8:1   (файл 2400×300 @2x);
-     телефон   — 640×200 CSS-пикселей, пропорция 16:5   (файл 1280×400 @2x).
+     компьютер — 1200×171 CSS-пикселей, пропорция 7:1  (файл 2400×342 @2x);
+     телефон   — 640×240 CSS-пикселей, пропорция 8:3   (файл 1280×480 @2x).
 
    Высота места задана через aspect-ratio, поэтому лента матчей не прыгает,
    пока грузится ролик, и не дёргается при смене креатива. */
@@ -427,7 +427,7 @@ img, video, svg, canvas, iframe { display: block; max-width: 100%; }
 .adzone__in {
   position: relative;
   width: 100%; max-width: 1200px; margin: 0 auto;
-  aspect-ratio: 8 / 1;
+  aspect-ratio: 7 / 1;
   border-radius: var(--r-lg); overflow: hidden;
   background: var(--surface-2); border: 1px solid var(--border);
   box-shadow: var(--shadow);
@@ -858,16 +858,11 @@ img, video, svg, canvas, iframe { display: block; max-width: 100%; }
 /* ------------------------------------------------------------------ страница матча */
 .mhero {
   position: relative; border-radius: var(--r-lg); overflow: hidden;
-  background: linear-gradient(160deg, var(--surface-2), var(--surface) 68%);
+  background: var(--surface);
   border: 1px solid var(--border); box-shadow: var(--shadow), var(--hairline);
 }
 /* Мягкое пятно сверху — карточка матча выглядит подсвеченной прожектором,
    а не просто плашкой другого оттенка. */
-.mhero::before {
-  content: ""; position: absolute; inset: -40% 20% auto 20%; height: 190px;
-  background: radial-gradient(60% 100% at 50% 100%, rgba(45,107,255,.22), transparent 70%);
-  pointer-events: none;
-}
 .mhero__top {
   display: flex; align-items: center; gap: 10px; padding: 11px 16px;
   border-bottom: 1px solid var(--border-soft); font-size: 12.5px; color: var(--text-2);
@@ -1119,8 +1114,21 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
 /* бомбардиры */
 .plist { display: grid; }
 .prow {
-  display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 11px;
-  padding: 9px 14px; border-bottom: 1px solid var(--border-soft); transition: background .13s;
+  display: grid; grid-template-columns: 24px auto 1fr auto; align-items: center; gap: 10px;
+  padding: 8px 14px; border-bottom: 1px solid var(--border-soft); transition: background .13s;
+}
+/* Портрет строго 3:4 и у всех одинаковый — иначе строки разъезжаются по высоте.
+   object-position сверху: на спортивных снимках лицо в верхней части кадра. */
+.prow__photo {
+  width: 36px; aspect-ratio: 3 / 4; border-radius: var(--r-sm);
+  object-fit: cover; object-position: 50% 18%;
+  background: var(--surface-3); flex-shrink: 0; display: block;
+}
+/* Фото нашлось не у всех — вместо дыры буква фамилии */
+.prow__photo--none {
+  display: grid; place-items: center;
+  font-size: 14px; font-weight: 800; color: var(--text-3);
+  background: var(--surface-3);
 }
 .prow:hover { background: var(--hover); }
 .prow__rank { font-family: var(--ff-num); font-weight: 800; color: var(--text-3); text-align: center; }
@@ -1212,13 +1220,20 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
   .col--left.is-open .leagues { max-height: none; }
   .mobnav { display: grid; }
 
-  /* Телефонный баннер: пропорция 16:5 вместо 8:1, иначе на 390 px ширины
-     полоса вышла бы высотой 48 px и реклама в ней не читалась бы. */
+  /* Полоса вкладок принадлежит разделу «Матчи». В «Лайве» от неё нужен только
+     сам чип LIVE, в «Избранном» — ничего: там она занимала первый экран,
+     ни на что не влияя. Разделы существуют только здесь, где есть .mobnav,
+     поэтому на десктопе полоса всегда полная. */
+  body[data-section="live"] :is(.tabs-days, .tabs-sep, .tab[data-tab="all"]) { display: none; }
+  body[data-section="favorites"] .tabs-bar { display: none; }
+
+  /* Телефонный баннер: пропорция 8:3 вместо 7:1, иначе на 390 px ширины
+     полоса вышла бы высотой 56 px и реклама в ней не читалась бы. */
   .adzone { padding: 11px var(--gutter) 0; }
   /* max-width снят: на планшете 640 px оставляли по бокам пустые поля, а
      исходник 1280×400 спокойно растягивается до ширины колонки. */
-  .adzone__in { max-width: none; aspect-ratio: 16 / 5; border-radius: var(--r); }
-  .adzone--empty .adzone__in { aspect-ratio: auto; height: 54px; }
+  .adzone__in { max-width: none; aspect-ratio: 8 / 3; border-radius: var(--r); }
+  .adzone--empty .adzone__in { aspect-ratio: auto; height: 62px; }
 
   .brand__name { font-size: 21px; letter-spacing: .4px; }
   .brand__logo { width: 36px; height: 36px; }
@@ -1336,6 +1351,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
 
 .auth-btn {
   height: 32px;
+  display: inline-flex; align-items: center; gap: 6px;
   padding: 0 13px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -1354,7 +1370,11 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
 /* Вошедший пользователь: имя подсвечено фирменным жёлтым */
 .auth-btn--user { color: var(--yellow); border-color: var(--yellow-deep); }
 
-@media (max-width: 560px) { .auth-btn { max-width: 92px; padding: 0 10px; } }
+.auth-btn__icon { flex-shrink: 0; opacity: .85; }
+/* Длинное имя обрезаем в подписи, а не во всей кнопке — иначе иконку съест тоже */
+.auth-btn__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 560px) { .auth-btn { max-width: 104px; padding: 0 10px; gap: 5px; } }
 
 /* ------------------------------------------------------------------ профиль */
 .profile { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; }
@@ -1502,4 +1522,104 @@ img[src^="/static/logosligaioli/"] {
 }
 :root:not([data-theme="light"]) .lhero--dark-logo .lhero__logo {
   filter: brightness(0) invert(1);
+}
+
+/* ------------------------------------------------------------------ белый логотип Лигаи Олӣ
+   Крылатый лев — белый на прозрачном фоне, в тёмной теме он виден как есть.
+   В светлой теме белое на светлом не читается, поэтому закрашиваем в тёмный.
+   Прозрачные «прорези» (грива, рисунок мяча) остаются прозрачными, детали целы.
+   Привязка к имени файла, а не к id лиги: так правило работает везде, где
+   этот логотип показан — страница лиги, поиск, шапка матча. */
+:root[data-theme="light"] img[src$="/ligai-oli.png"] {
+  filter: brightness(0) invert(.14);
+}
+
+/* ------------------------------------------------------------------ вкладка «Матч»
+   Коэффициенты, бонус букмекера, справка о матче. Разбивка на полосы взята у
+   Flashscore: заголовок столбцов и строка букмекера отделены фоном, кликабельные
+   ячейки имеют собственную подложку — так видно, что на них можно нажать. */
+.odds__kind { padding: 10px var(--gutter) 2px; }
+.odds__pill {
+  display: inline-block; padding: 5px 13px; border-radius: 999px;
+  background: var(--red); color: #fff;
+  font-size: 11.5px; font-weight: 800; letter-spacing: .4px;
+}
+.odds__grid {
+  display: grid; grid-template-columns: minmax(84px, 1.4fr) repeat(3, 1fr);
+  gap: 8px; align-items: center; padding: 9px var(--gutter);
+}
+/* Строка с подписями столбцов 1 / X / 2 */
+.odds__grid--head {
+  padding-top: 8px; padding-bottom: 8px; gap: 8px;
+  background: var(--surface-2); border-block: 1px solid var(--border-soft);
+  font-size: 11.5px; font-weight: 800; color: var(--text-2); text-align: center;
+}
+.odds__grid--head span { text-align: center; }
+
+/* Логотип белый, поэтому своя тёмная подложка — на светлой теме иначе исчезнет */
+.odds__bookie {
+  display: grid; place-items: center; padding: 7px 9px;
+  background: #0E1726; border-radius: var(--r); border: 1px solid var(--border);
+}
+.odds__bookie img { width: 100%; max-width: 74px; height: auto; display: block; }
+
+.odds__cell {
+  position: relative; display: grid; place-items: center; min-height: 42px;
+  border: 1px solid var(--border); border-radius: var(--r);
+  background: var(--surface-2); color: var(--text); text-decoration: none;
+  font-family: var(--ff-num); font-size: 15px; font-weight: 800;
+  transition: border-color .16s, background .16s, transform .16s;
+}
+.odds__cell:hover { border-color: var(--yellow); background: var(--surface-3); transform: translateY(-1px); }
+.odds__ext { position: absolute; top: 5px; right: 5px; color: var(--text-3); }
+
+.bonus__wrap { padding: 10px var(--gutter) 13px; }
+.bonus__row {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center;
+  padding: 11px 12px; border-radius: var(--r);
+  background: var(--surface-2); border: 1px solid var(--border);
+  text-decoration: none; color: inherit;
+  transition: border-color .16s, background .16s;
+}
+.bonus__row:hover { border-color: var(--yellow); background: var(--surface-3); }
+.bonus__logo {
+  display: grid; place-items: center; padding: 7px 9px; border-radius: var(--r-sm);
+  background: #0E1726; flex-shrink: 0;
+}
+.bonus__logo img { width: 62px; height: auto; display: block; }
+.bonus__text { font-size: 13px; font-weight: 650; line-height: 1.35; }
+.bonus__arrow { color: var(--text-3); flex-shrink: 0; }
+
+.minfo__body { padding: 4px var(--gutter) 12px; }
+.minfo__row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border-soft);
+}
+.minfo__row:last-child { border-bottom: 0; }
+.minfo__icon { color: var(--text-3); flex-shrink: 0; }
+.minfo__label { font-size: 12.5px; color: var(--text-2); }
+.minfo__value { margin-left: auto; text-align: right; font-size: 13px; font-weight: 700; }
+
+/* Форма команд: логотип рядом с названием, как в шапке матча */
+.mform__col { padding: 12px 14px; }
+.mform__head { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.mform__logo { width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; }
+.mform__name {
+  font-size: 11.5px; font-weight: 800; letter-spacing: .3px;
+  color: var(--text-2); text-transform: uppercase;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Команды этого матча в таблице лиги — иначе их не найти среди двадцати строк */
+.tbl tr.is-here { background: color-mix(in srgb, var(--yellow) 11%, transparent); }
+.tbl tr.is-here .c-team span { font-weight: 800; }
+
+@media (max-width: 420px) {
+  .odds__grid { grid-template-columns: minmax(64px, 1fr) repeat(3, 1fr); gap: 6px; }
+  .odds__bookie { padding: 6px; }
+  .odds__bookie img { max-width: 58px; }
+  .bonus__row { grid-template-columns: auto 1fr; }
+  .bonus__arrow { display: none; }
+  .bonus__logo img { width: 52px; }
+  .mform__name { font-size: 10.5px; }
 }

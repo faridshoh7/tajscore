@@ -5,8 +5,14 @@ from datetime import datetime, timedelta, timezone
 
 from app import db
 from app.api_client import api
-from app.config import LEAGUE_IDS, SEASON_BY_LEAGUE, SYNC, LEAGUE_BY_ID
+from app.config import (LEAGUE_IDS, PRIMARY_LEAGUE_ID, SEASON_BY_LEAGUE, SYNC,
+                        LEAGUE_BY_ID)
 from app.sync import store
+from app.sync.fdorg import COMPETITIONS as FD_COMPETITIONS
+
+# Лиги, за которые отвечает API-Football: главная плюс те, которых нет
+# у football-data.org. Остальные ему не нужны — их ведёт второй источник.
+OWN_LEAGUE_IDS = [lid for lid in LEAGUE_IDS if lid not in FD_COMPETITIONS]
 
 log = logging.getLogger("tajscore.sync")
 
@@ -32,9 +38,14 @@ async def sync_fixtures_date(date_str: str, task: str = "fixtures_today") -> int
 
 
 # ------------------------------------------------------------------ live
-async def sync_live() -> int:
-    """Один запрос = все живые матчи мира."""
-    resp = await api.get("/fixtures", {"live": "all"}, "live")
+async def sync_live(task: str = "live") -> int:
+    """Один запрос = все живые матчи мира.
+
+    task задаёт корзину бюджета: "tj_live", когда запрос делается ради Лигаи Олӣ,
+    иначе "live". Сам ответ в обоих случаях один и тот же — ?live=all отдаёт все
+    матчи сразу, так что платит одна лига, а пользуются все.
+    """
+    resp = await api.get("/fixtures", {"live": "all"}, task)
     if resp is None:
         return -1
     n = store.save_fixtures(resp)
@@ -65,17 +76,46 @@ async def finalize_stale_live() -> int:
     return n
 
 
-def live_mode_active() -> bool:
-    """Есть ли смысл опрашивать live прямо сейчас."""
+def _matches_in_window(league_ids) -> int:
+    """Сколько матчей этих лиг попадает в живое окно: вот-вот начнутся или идут."""
+    if not league_ids:
+        return 0
     now = int(time.time())
     row = db.query_one(
         f"""SELECT COUNT(*) n FROM fixtures
-            WHERE league_id IN ({','.join('?' * len(LEAGUE_IDS))})
+            WHERE league_id IN ({','.join('?' * len(league_ids))})
               AND timestamp BETWEEN ? AND ?
               AND status_short NOT IN ({','.join('?' * len(FINISHED_STATUSES))})""",
-        (*LEAGUE_IDS, now - SYNC["live_window_after"], now + SYNC["live_window_before"],
+        (*league_ids, now - SYNC["live_window_after"], now + SYNC["live_window_before"],
          *FINISHED_STATUSES),
     )
+    return row["n"] if row else 0
+
+
+def live_mode_active() -> bool:
+    """Есть ли смысл опрашивать live прямо сейчас (любая наша лига)."""
+    return _matches_in_window(OWN_LEAGUE_IDS) > 0
+
+
+def primary_live_active() -> bool:
+    """Идут ли прямо сейчас матчи Лигаи Олӣ.
+
+    От этого зависит, из какой корзины оплачивается live-запрос и как часто он
+    делается: ради главной лиги опрашиваем втрое чаще, чем ради остальных.
+    """
+    return _matches_in_window([PRIMARY_LEAGUE_ID]) > 0
+
+
+def primary_has_matches_today() -> bool:
+    """Есть ли у Лигаи Олӣ матчи в текущие сутки по UTC.
+
+    Нужно, чтобы решить, выделять ли ей корзину live на сегодня. В пустой день
+    её 50 запросов достаются другим лигам.
+    """
+    today = utc_date(0)
+    row = db.query_one(
+        "SELECT COUNT(*) n FROM fixtures WHERE league_id=? AND date_utc LIKE ?",
+        (PRIMARY_LEAGUE_ID, f"{today}%"))
     return bool(row and row["n"])
 
 
@@ -154,13 +194,18 @@ def pick_stale_players() -> tuple[int, str] | None:
 
 
 # ------------------------------------------------------------------ карточка матча
-async def sync_detail(fixture_id: int, force: bool = False) -> bool:
-    """Один запрос /fixtures?id= отдаёт события + составы + статистику сразу."""
+async def sync_detail(fixture_id: int, force: bool = False,
+                      task: str = "detail") -> bool:
+    """Один запрос /fixtures?id= отдаёт события + составы + статистику сразу.
+
+    task выбирает корзину бюджета: карточки матчей Лигаи Олӣ идут из её запаса,
+    чтобы добор событий по чужим лигам их не вытеснил.
+    """
     row = db.query_one("SELECT status_short, detail_synced_at, timestamp FROM fixtures WHERE id=?",
                        (fixture_id,))
     if row and not force and not detail_is_stale(row):
         return True
-    resp = await api.get("/fixtures", {"id": fixture_id}, "detail")
+    resp = await api.get("/fixtures", {"id": fixture_id}, task)
     if resp is None:
         return False
     item = resp[0] if resp else None

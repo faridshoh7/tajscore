@@ -43,11 +43,15 @@ def write():
 
 
 def query(sql: str, params=()) -> list[sqlite3.Row]:
-    return get_conn().execute(sql, params).fetchall()
+    conn = get_conn()
+    conn.commit()
+    return conn.execute(sql, params).fetchall()
 
 
 def query_one(sql: str, params=()):
-    return get_conn().execute(sql, params).fetchone()
+    conn = get_conn()
+    conn.commit()
+    return conn.execute(sql, params).fetchone()
 
 
 def execute(sql: str, params=()):
@@ -71,6 +75,29 @@ def _migrate(conn) -> None:
     cols = {r[1] for r in conn.execute("PRAGMA table_info(player_stats)")}
     if "source" not in cols:
         conn.execute("ALTER TABLE player_stats ADD COLUMN source TEXT DEFAULT 'calc'")
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(fixtures)")}
+    if "venue_capacity" not in cols:
+        conn.execute("ALTER TABLE fixtures ADD COLUMN venue_capacity INTEGER")
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(person_names)")}
+    for col, decl in (("photo", "TEXT"), ("photo_author", "TEXT"),
+                      ("photo_license", "TEXT"), ("photo_checked_at", "INTEGER DEFAULT 0")):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE person_names ADD COLUMN {col} {decl}")
+    # devices table
+    tables = {r[0] for r in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'")}
+    if "devices" not in tables:
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS devices (
+                device_id    TEXT PRIMARY KEY,
+                device_name  TEXT,
+                ua           TEXT,
+                first_seen   INTEGER NOT NULL,
+                last_seen    INTEGER NOT NULL,
+                visits       INTEGER NOT NULL DEFAULT 1
+            );
+            CREATE INDEX IF NOT EXISTS idx_devices_last ON devices(last_seen);
+        """)
 
 
 def init_db() -> None:
@@ -104,6 +131,13 @@ def seed_leagues() -> None:
                    group_stage=excluded.group_stage, priority=excluded.priority""",
             rows,
         )
+        # У виртуальной лиги «Сборная Таджикистана» нет API-источника, который
+        # проставит лого, поэтому ставим его здесь — флаг Таджикистана.
+        from app.config import NATIONAL_TEAM
+        nt_id = NATIONAL_TEAM["league_id"]
+        flag = "https://media.api-sports.io/flags/tj.svg"
+        conn.execute("UPDATE leagues SET logo=?, flag=? WHERE id=? AND logo IS NULL",
+                     (flag, flag, nt_id))
 
 
 # ------------------------------------------------------------------ утилиты

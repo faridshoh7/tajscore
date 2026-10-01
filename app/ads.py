@@ -24,10 +24,10 @@ _RECHECK_SEC = 5.0          # как часто заглядываем в фай
 # Размеры рекламного места. Их же отдаём в /api/ads, чтобы фронт не расходился
 # с вёрсткой, а владелец мог свериться прямо в браузере.
 SIZES = {
-    "desktop": {"width": 1200, "height": 150, "ratio": "8 / 1",
-                "recommended": "2400x300 (@2x)"},
-    "mobile": {"width": 640, "height": 200, "ratio": "16 / 5",
-               "recommended": "1280x400 (@2x)"},
+    "desktop": {"width": 1200, "height": 171, "ratio": "7 / 1",
+                "recommended": "2400x342 (@2x)"},
+    "mobile": {"width": 640, "height": 240, "ratio": "8 / 3",
+               "recommended": "1280x480 (@2x)"},
 }
 
 _ALLOWED_TYPES = ("video", "image")

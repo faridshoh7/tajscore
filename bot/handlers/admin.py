@@ -103,7 +103,7 @@ async def stats(cb: CallbackQuery):
 async def dump_db(cb: CallbackQuery):
     await cb.answer("Готовлю файл…")
     data = await repo.csv_bytes()
-    name = f"tajscore-users-{time.strftime('%Y%m%d-%H%M')}.csv"
+    name = f"tajscore-users-{time.strftime('%Y%m%d-%H%M')}.txt"
     s = await repo.stats()
     await cb.message.answer_document(
         BufferedInputFile(data, filename=name),

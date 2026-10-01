@@ -29,13 +29,15 @@ window.Auth = (function () {
   function renderHeader() {
     const btn = $("#btnAuth");
     if (!btn) return;
+    // Меняем только подпись: иконка человека в кнопке должна пережить перерисовку
+    const label = btn.querySelector(".auth-btn__label") || btn;
     if (user) {
       btn.classList.add("auth-btn--user");
-      btn.textContent = user.name;
+      label.textContent = user.name;
       btn.title = t("auth.profile");
     } else {
       btn.classList.remove("auth-btn--user");
-      btn.textContent = t("auth.login.short");
+      label.textContent = t("auth.login.short");
       btn.title = t("auth.login");
     }
   }
@@ -144,7 +146,7 @@ window.Auth = (function () {
         : "";
       if (left <= 0) { stopPoll(); expired(); return; }
       let res;
-      try { res = await req("/api/auth/poll?token=" + encodeURIComponent(data.token)); }
+      try { res = await req("/api/auth/poll?token=" + encodeURIComponent(data.token) + (data.sid ? "&sid=" + encodeURIComponent(data.sid) : "")); }
       catch (e) { return; }   // сеть моргнула — попробуем на следующем тике
       if (res.status === "ok") {
         stopPoll();
@@ -239,6 +241,10 @@ window.Auth = (function () {
     if (e.key === "Escape") closeModal();
     if (e.key === "Enter" && e.target.id === "swNotify") e.target.click();
   });
+
+  /* Кнопку входа applyI18n() больше не трогает, поэтому перевести её при смене
+     языка должны мы сами. */
+  document.addEventListener("tajscore:settings", () => { renderHeader(); renderProfile(); });
 
   async function init() {
     try {

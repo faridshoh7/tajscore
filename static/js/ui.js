@@ -12,6 +12,14 @@ window.UI = (function () {
     return `<img class="${cls}" src="${esc(url)}" alt="${esc(alt || "")}" loading="lazy" onerror="this.style.visibility='hidden'">`;
   }
 
+  /* Иконка лиги в списках. Обычно это флаг страны, а у международных турниров
+     флага нет — тогда эмблема. У лиг из LOGO_OVER_FLAG есть собственный
+     фирменный знак, и он важнее флага. */
+  const LOGO_OVER_FLAG = [571];
+  function leagueIcon(l) {
+    return LOGO_OVER_FLAG.includes(l.id) ? (l.logo || l.flag) : (l.flag || l.logo);
+  }
+
   /* Левая колонка времени: часы, минута матча или «Финал» */
   function timeCell(m, opts) {
     if (LIVE.has(m.status)) {
@@ -81,11 +89,9 @@ window.UI = (function () {
 
   function leagueBlock(group, idx) {
     const l = group.league;
-    const name = Settings.get().lang === "tg" ? l.name_tg : l.name_ru;
-    const country = Settings.get().lang === "tg" ? l.country_tg : l.country_ru;
-    // У международных турниров (ЧМ, ЛЧ, Лига наций) флага страны нет —
-    // подставляем эмблему турнира, она есть у всех лиг.
-    const icon = l.flag || l.logo;
+    const name = pick(l, "name");
+    const country = pick(l, "country");
+    const icon = leagueIcon(l);
     const liveN = group.matches.filter(m => LIVE.has(m.status)).length;
     const badge = liveN
       ? `<span class="league-block__count league-block__count--live">${liveN} LIVE</span>`
@@ -142,5 +148,5 @@ window.UI = (function () {
     if (row && !e.target.closest("a")) location.href = "/match/" + row.dataset.match;
   });
 
-  return { esc, logo, matchRow, leagueBlock, empty, skeleton, timeCell, scoreCell, LIVE, DONE, starSvg };
+  return { esc, logo, leagueIcon, matchRow, leagueBlock, empty, skeleton, timeCell, scoreCell, LIVE, DONE, starSvg };
 })();

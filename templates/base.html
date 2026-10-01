@@ -1,9 +1,23 @@
 <!doctype html>
-<html lang="ru" data-theme="dark">
+<html lang="ru" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#060A12">
+<script>
+/* Тема ставится до первой отрисовки, иначе страница моргнёт светлым, пока
+   грузится settings.js. Логика та же: выбор человека сильнее системы. */
+(function () {
+  try {
+    var saved = JSON.parse(localStorage.getItem("tajscore.settings") || "{}").theme;
+    var theme = (saved === "dark" || saved === "light") ? saved
+      : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.dataset.theme = theme;
+    document.querySelector('meta[name="theme-color"]').content =
+      theme === "dark" ? "#060A12" : "#EFF2F8";
+  } catch (e) { /* нет localStorage — останется светлая из разметки */ }
+})();
+</script>
 <meta name="description" content="Tajscore — футбол онлайн: Лигаи Олӣ (Истиклол, Худжанд, Регар-ТадАЗ), Лига чемпионов, АПЛ, Ла Лига, Серия А, Бундеслига. Счёт в реальном времени, таблицы, календарь.">
 <title>{% block title %}Tajscore — футбол онлайн{% endblock %}</title>
 <link rel="icon" href="/static/img/logo-round.png">
@@ -14,7 +28,7 @@
 <!-- Inter — интерфейс (в подмножестве cyrillic-ext есть ӯ ҳ ҷ қ ғ),
      Archivo Black — только логотип TAJSCORE в шапке. -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400..900&display=swap">
-<link rel="stylesheet" href="/static/css/style.css?v=9">
+<link rel="stylesheet" href="/static/css/style.css?v=20">
 </head>
 <body>
 
@@ -49,7 +63,14 @@
       <button class="icon-btn icon-btn--search" id="btnSearch" data-i18n-aria="search.placeholder" title="Поиск" aria-label="Поиск">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
       </button>
-      <button class="auth-btn" id="btnAuth" data-i18n="auth.login.short">Войти</button>
+      <!-- без data-i18n: надпись ставит только Auth.renderHeader(), иначе
+           applyI18n() затирал бы имя вошедшего обратно на «Войти» -->
+      <button class="auth-btn{% if auth_name %} auth-btn--user{% endif %}" id="btnAuth">
+        <svg class="auth-btn__icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+        <span class="auth-btn__label">{{ auth_name or "Вход" }}</span>
+      </button>
       <button class="icon-btn" id="btnLeagues" data-i18n-aria="nav.leagues" title="Лиги" aria-label="Лиги">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
@@ -130,6 +151,7 @@
     <div class="seg" id="segLang">
       <button data-val="ru">Русский</button>
       <button data-val="tg">Тоҷикӣ</button>
+      <button data-val="en">English</button>
     </div>
   </div>
 
@@ -154,7 +176,7 @@
   <div class="drawer__section">
     <div class="drawer__label" data-i18n="settings.about">О сайте</div>
     <div style="font-size:13px;color:var(--text-2);line-height:1.8">
-      Телеграм поддержка: <a href="https://t.me/tajscoresupport" target="_blank" style="color:var(--blue)">@tajscoresupport</a><br>
+      Телеграм поддержка: <a href="https://t.me/tajscore_support" target="_blank" style="color:var(--blue)">@tajscore_support</a><br>
       Телеграм разработчика: <a href="https://t.me/nubho" target="_blank" style="color:var(--blue)">@nubho</a>
     </div>
   </div>
@@ -190,13 +212,13 @@
   </div>
 </div>
 
-<script src="/static/js/i18n.js?v=9"></script>
-<script src="/static/js/settings.js?v=9"></script>
+<script src="/static/js/i18n.js?v=20"></script>
+<script src="/static/js/settings.js?v=20"></script>
 <script src="/static/js/api.js?v=9"></script>
 <script src="/static/js/ads.js?v=9"></script>
-<script src="/static/js/ui.js?v=9"></script>
-<script src="/static/js/auth.js?v=9"></script>
-<script src="/static/js/app.js?v=9"></script>
+<script src="/static/js/ui.js?v=20"></script>
+<script src="/static/js/auth.js?v=20"></script>
+<script src="/static/js/app.js?v=21"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

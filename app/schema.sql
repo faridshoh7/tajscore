@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS fixtures (
     extra_minute  INTEGER,
     venue_name    TEXT,
     venue_city    TEXT,
+    venue_capacity INTEGER,   -- бесплатный тариф её не отдаёт; заполняется вручную
     referee       TEXT,
     home_id       INTEGER,
     away_id       INTEGER,
@@ -147,6 +148,41 @@ CREATE TABLE IF NOT EXISTS player_stats (
     -- 'fdorg' — импортировано из football-data.org (полнее: весь сезон)
     source     TEXT DEFAULT 'calc',
     PRIMARY KEY (league_id, season, category, rank)
+);
+
+-- Русские и таджикские написания имён людей.
+-- Клубы и сборные лежат в справочниках (app/names.py, app/teams_tj.py): их
+-- названия договорные и правятся руками. А игроков сотни, состав меняется
+-- каждый тур, поэтому написание берётся из Wikidata (лицензия CC0) и кэшируется
+-- здесь: один и тот же человек запрашивается ровно один раз.
+--   ru/tg = NULL и checked_at > 0 — искали и не нашли, повторять незачем.
+CREATE TABLE IF NOT EXISTS person_names (
+    latin      TEXT PRIMARY KEY,
+    ru         TEXT,
+    tg         TEXT,
+    qid        TEXT,       -- идентификатор Wikidata, чтобы можно было проверить
+    checked_at INTEGER DEFAULT 0,
+    -- Портрет с Викисклада: путь к уже обрезанному файлу на нашем диске.
+    -- Автор и лицензия не показываются, но хранятся: по условиям CC BY-SA
+    -- подпись нужна, и если решим её включить — данные уже под рукой.
+    photo      TEXT,
+    photo_author  TEXT,
+    photo_license TEXT,
+    photo_checked_at INTEGER DEFAULT 0
+);
+
+-- Коэффициенты букмекера на исход матча (1 / X / 2).
+-- Живут отдельно от fixtures: приходят из третьего источника, обновляются по
+-- своему расписанию и устаревают быстрее всего остального на сайте.
+--   url — ссылка на страницу матча у букмекера, туда ведут кнопки.
+CREATE TABLE IF NOT EXISTS odds (
+    fixture_id INTEGER PRIMARY KEY,
+    home       REAL,
+    draw       REAL,
+    away       REAL,
+    event_id   INTEGER,     -- id события у букмекера
+    url        TEXT,
+    updated_at INTEGER NOT NULL DEFAULT 0
 );
 
 -- ------------------------------------------------------------------ Служебное
@@ -260,3 +296,16 @@ CREATE TABLE IF NOT EXISTS favorites (
     created_at INTEGER NOT NULL,
     PRIMARY KEY (user_id, type, item_id)
 );
+
+-- ------------------------------------------------------------------ Устройства
+-- Каждое устройство получает UUID-куку при первом заходе. Одно устройство с
+-- разными IP — один пользователь. Имя устройства парсится из User-Agent.
+CREATE TABLE IF NOT EXISTS devices (
+    device_id    TEXT PRIMARY KEY,
+    device_name  TEXT,               -- краткое имя из UA: "iPhone 15 / Safari", "Windows / Chrome"
+    ua           TEXT,               -- полный User-Agent (для отладки)
+    first_seen   INTEGER NOT NULL,
+    last_seen    INTEGER NOT NULL,
+    visits       INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX IF NOT EXISTS idx_devices_last ON devices(last_seen);

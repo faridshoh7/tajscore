@@ -25,16 +25,19 @@ log = logging.getLogger("tajscore")
 async def lifespan(app: FastAPI):
     db.init_db()
     auth_store.cleanup()   # чистим протухшие сессии и login-токены
-    log.info("База готова, запускаю воркер синхронизации")
-    task = asyncio.create_task(worker.run_forever(), name="tajscore-sync")
+    log.info("База готова, запускаю воркеры синхронизации")
+    # Два источника с разными лимитами крутятся независимо: медленный
+    # API-Football не должен задерживать частый опрос football-data.
+    jobs = [
+        asyncio.create_task(worker.run_forever(), name="tajscore-sync"),
+        asyncio.create_task(worker.fd_run_forever(), name="tajscore-fd"),
+    ]
     try:
         yield
     finally:
-        task.cancel()
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+        for t in jobs:
+            t.cancel()
+        await asyncio.gather(*jobs, return_exceptions=True)
 
 
 app = FastAPI(title="Tajscore", docs_url="/api/docs", redoc_url=None, lifespan=lifespan)
@@ -46,7 +49,7 @@ async def track_visits(request: Request, call_next):
     статику и /api отсеивает сам record_visit."""
     response = await call_next(request)
     if response.status_code < 400:
-        admin.record_visit(request)
+        admin.record_visit(request, response)
     return response
 
 

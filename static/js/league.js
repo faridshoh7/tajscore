@@ -19,8 +19,8 @@ window.LeaguePage = (function () {
   const DARK_LOGO_IDS = [1, 2, 3, 5, 848];
   function hero(l) {
     const lang = Settings.get().lang;
-    const name = lang === "tg" ? l.name_tg : l.name_ru;
-    const country = lang === "tg" ? l.country_tg : l.country_ru;
+    const name = pick(l, "name");
+    const country = pick(l, "country");
     const dark = DARK_LOGO_IDS.includes(l.id) ? " lhero--dark-logo" : "";
     return `<div class="card lhero${dark}">
       ${UI.logo(l.logo, "lhero__logo", name)}
@@ -60,7 +60,7 @@ window.LeaguePage = (function () {
               <tr class="${r.zone ? "zone-" + r.zone : ""}" data-team="${r.team_id}">
                 <td class="c-rank">${r.rank}</td>
                 <td class="c-team"><div>
-                  ${UI.logo(r.logo, "", tname(r, "team", "team_tg"))}<span>${esc(tname(r, "team", "team_tg"))}</span>
+                  ${UI.logo(r.logo, "", tname(r, "team", "team_tg", "team_en"))}<span>${esc(tname(r, "team", "team_tg", "team_en"))}</span>
                 </div></td>
                 <td>${r.played}</td>
                 <td class="hide-sm">${r.win}</td>
@@ -70,7 +70,7 @@ window.LeaguePage = (function () {
                 <td>${r.gd > 0 ? "+" + r.gd : r.gd}</td>
                 <td class="c-pts">${r.points}</td>
                 <td class="hide-sm"><div class="form-row">${(r.form || []).slice(-5)
-                  .map(f => `<span class="form-badge form-badge--${esc(f)}">${esc(f)}</span>`).join("")}</div></td>
+                  .map(f => `<span class="form-badge form-badge--${esc(f)}">${esc(tform(f))}</span>`).join("")}</div></td>
               </tr>`).join("")}
             </tbody>
           </table>
@@ -115,14 +115,29 @@ window.LeaguePage = (function () {
       <div class="card__body">${list.map((p, i) => `
         <div class="prow" data-team="${p.team_id}" style="--j:${i}">
           <div class="prow__rank">${p.rank}</div>
+          ${photoCell(p)}
           <div class="prow__info">
-            <div class="prow__name">${esc(p.name)}</div>
-            <div class="prow__team">${UI.logo(p.team_logo, "", tname(p, "team_name", "team_name_tg"))}<span>${esc(tname(p, "team_name", "team_name_tg"))}</span></div>
+            <div class="prow__name">${esc(tname(p))}</div>
+            <div class="prow__team">${UI.logo(p.team_logo, "", tname(p, "team_name", "team_name_tg", "team_name_en"))}<span>${esc(tname(p, "team_name", "team_name_tg", "team_name_en"))}</span></div>
           </div>
           <div class="prow__val">${p.value}</div>
         </div>`).join("")}
       </div>
     </section>`;
+  }
+
+
+  /* Портрет игрока: жёсткие 3:4, чтобы строки не прыгали. Фото есть не у всех —
+     вместо него заглушка с первой буквой фамилии, а не пустая дыра. */
+  function photoCell(p) {
+    if (p.photo) {
+      return `<img class="prow__photo" src="${esc(p.photo)}" alt="" loading="lazy"
+                   onerror="this.replaceWith(Object.assign(document.createElement('div'),
+                            {className:'prow__photo prow__photo--none'}))">`;
+    }
+    const nm = tname(p) || "";
+    const letter = (nm.split(" ").slice(-1)[0] || nm).slice(0, 1).toUpperCase();
+    return `<div class="prow__photo prow__photo--none">${esc(letter)}</div>`;
   }
 
   /* ---------------------------------------------------------------- плей-офф */
@@ -183,7 +198,7 @@ window.LeaguePage = (function () {
       return;
     }
     const lang = Settings.get().lang;
-    document.title = (lang === "tg" ? data.league.name_tg : data.league.name_ru) + " — Tajscore";
+    document.title = pick(data.league, "name") + " — Tajscore";
     render();
 
     page.addEventListener("click", e => {

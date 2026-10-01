@@ -5,96 +5,553 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>Админка — Tajscore</title>
-<link rel="icon" href="/static/img/logo.png">
-<link rel="stylesheet" href="/static/css/style.css?v=7">
+<link rel="icon" href="/static/img/logo-round.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..900&display=swap">
 <style>
-  .adm { max-width: 1200px; margin: 0 auto; padding: 18px 16px 60px; }
-  .adm__head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; flex-wrap: wrap; }
-  .adm__title { font-size: 21px; font-weight: 900; }
-  .adm__note { font-size: 12px; color: var(--text-3); }
-  .adm__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 18px; }
-  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 15px; }
-  .stat-card__val { font-size: 26px; font-weight: 900; font-family: var(--ff-num); color: var(--yellow); }
-  .stat-card__lbl { font-size: 12px; color: var(--text-3); margin-top: 3px; }
-  .adm .card { margin-bottom: 16px; }
-  .adm .tbl td, .adm .tbl th { text-align: left; }
-  .ip { font-family: var(--ff-num); font-weight: 700; }
-  .ua { color: var(--text-3); font-size: 11.5px; max-width: 320px; overflow: hidden;
-        text-overflow: ellipsis; white-space: nowrap; }
+:root {
+  --bg: #0c0f17; --surface: #161a26; --surface-2: #1c2132;
+  --border: #252a3a; --text-1: #e8eaf0; --text-2: #9198aa; --text-3: #5c6378;
+  --blue: #4e8cff; --green: #3dd68c; --yellow: #f5c542; --red: #f55c5c;
+  --orange: #f5a442; --purple: #a06cf5;
+  --r-md: 10px; --r-lg: 14px;
+  --ff: 'Inter', system-ui, sans-serif;
+  --ff-num: 'Inter', tabular-nums, sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; }
+body { font-family: var(--ff); background: var(--bg); color: var(--text-1); font-size: 14px; line-height: 1.5; }
+a { color: var(--blue); text-decoration: none; }
+
+.adm { max-width: 1100px; margin: 0 auto; padding: 20px 16px 80px; }
+
+/* header */
+.adm__head { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; flex-wrap: wrap; }
+.adm__back { display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: var(--r-md); background: var(--surface);
+  border: 1px solid var(--border); color: var(--text-2); cursor: pointer; }
+.adm__back:hover { color: var(--text-1); border-color: var(--text-3); }
+.adm__title { font-size: 22px; font-weight: 900; }
+.adm__badge { font-size: 11px; color: var(--text-3); background: var(--surface); border: 1px solid var(--border);
+  padding: 3px 10px; border-radius: 20px; }
+
+/* tabs */
+.tabs { display: flex; gap: 4px; margin-bottom: 24px; flex-wrap: wrap; }
+.tabs__btn { padding: 8px 18px; border-radius: var(--r-md); border: 1px solid var(--border);
+  background: transparent; color: var(--text-2); cursor: pointer; font: inherit; font-weight: 600;
+  font-size: 13px; transition: all .15s; }
+.tabs__btn:hover { color: var(--text-1); border-color: var(--text-3); }
+.tabs__btn.is-active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+.tab-content { display: none; }
+.tab-content.is-active { display: block; }
+
+/* stat cards grid */
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+.sc { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px; }
+.sc__val { font-size: 28px; font-weight: 900; font-family: var(--ff-num); color: var(--yellow); }
+.sc__val--blue { color: var(--blue); }
+.sc__val--green { color: var(--green); }
+.sc__val--red { color: var(--red); }
+.sc__val--purple { color: var(--purple); }
+.sc__val--orange { color: var(--orange); }
+.sc__lbl { font-size: 12px; color: var(--text-3); margin-top: 3px; }
+.sc__sub { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+/* cards */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+  margin-bottom: 16px; overflow: hidden; }
+.card__head { padding: 14px 18px; display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid var(--border); }
+.card__title { font-weight: 800; font-size: 15px; }
+.card__count { font-size: 12px; color: var(--text-3); background: var(--surface-2);
+  padding: 2px 8px; border-radius: 10px; }
+
+/* table */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { font-size: 11px; font-weight: 700; color: var(--text-3); text-transform: uppercase;
+  letter-spacing: .05em; padding: 10px 14px; text-align: left; }
+td { padding: 10px 14px; border-top: 1px solid var(--border); font-size: 13px; }
+tr:hover td { background: var(--surface-2); }
+.num { font-family: var(--ff-num); font-weight: 700; text-align: right; }
+.mono { font-family: var(--ff-num); font-size: 12px; color: var(--text-2); }
+.dim { color: var(--text-3); }
+.tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 6px;
+  font-weight: 600; }
+.tag--ok { background: rgba(61,214,140,.15); color: var(--green); }
+.tag--warn { background: rgba(245,164,66,.15); color: var(--orange); }
+.tag--err { background: rgba(245,92,92,.15); color: var(--red); }
+.tag--info { background: rgba(78,140,255,.15); color: var(--blue); }
+
+/* progress bar */
+.bar { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; margin-top: 6px; }
+.bar__fill { height: 100%; border-radius: 4px; transition: width .3s; }
+.bar__fill--green { background: var(--green); }
+.bar__fill--blue { background: var(--blue); }
+.bar__fill--yellow { background: var(--yellow); }
+.bar__fill--red { background: var(--red); }
+
+/* sync table */
+.sync-key { font-weight: 600; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sync-note { font-size: 12px; color: var(--text-2); max-width: 250px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+
+/* intervals */
+.irow { display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid var(--border); }
+.irow:last-child { border-bottom: none; }
+.irow__name { font-size: 13px; }
+.irow__val { font-family: var(--ff-num); font-weight: 700; color: var(--blue); font-size: 13px; }
+
+/* responsive */
+@media (max-width: 600px) {
+  .stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .sc { padding: 12px; }
+  .sc__val { font-size: 22px; }
+  th, td { padding: 8px 10px; }
+  .tabs__btn { padding: 6px 12px; font-size: 12px; }
+}
 </style>
 </head>
 <body>
 <div class="adm">
   <div class="adm__head">
-    <a class="btn-back" href="/" aria-label="На сайт" title="На сайт">
+    <a class="adm__back" href="/" title="На сайт">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-           stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M15 19l-7-7 7-7"/></svg>
+           stroke-width="2.4" stroke-linecap="round"><path d="M15 19l-7-7 7-7"/></svg>
     </a>
-    <div class="adm__title">Посещения</div>
-    <div class="adm__note">записи старше {{ stats.retention }} дней удаляются автоматически</div>
+    <div class="adm__title">Админ-панель</div>
+    <div class="adm__badge">записи хранятся {{ retention }} дней</div>
   </div>
 
-  <div class="adm__grid">
-    <div class="stat-card"><div class="stat-card__val">{{ stats.day }}</div>
-      <div class="stat-card__lbl">заходов за сутки</div></div>
-    <div class="stat-card"><div class="stat-card__val">{{ stats.day_uniq }}</div>
-      <div class="stat-card__lbl">уникальных за сутки</div></div>
-    <div class="stat-card"><div class="stat-card__val">{{ stats.week }}</div>
-      <div class="stat-card__lbl">за неделю</div></div>
-    <div class="stat-card"><div class="stat-card__val">{{ stats.total }}</div>
-      <div class="stat-card__lbl">всего заходов</div></div>
-    <div class="stat-card"><div class="stat-card__val">{{ stats.uniq }}</div>
-      <div class="stat-card__lbl">всего уникальных IP</div></div>
+  <div class="tabs">
+    <button class="tabs__btn{% if tab == 'overview' %} is-active{% endif %}" data-tab="overview">Обзор</button>
+    <button class="tabs__btn{% if tab == 'users' %} is-active{% endif %}" data-tab="users">Пользователи</button>
+    <button class="tabs__btn{% if tab == 'content' %} is-active{% endif %}" data-tab="content">Контент</button>
+    <button class="tabs__btn{% if tab == 'api' %} is-active{% endif %}" data-tab="api">API и парсеры</button>
   </div>
 
-  <section class="card">
-    <div class="card__head"><span class="card__title card__title--accent">Посетители</span>
-      <span class="league-block__count">{{ visitors|length }}</span></div>
-    <div class="table-wrap">
-      <table class="tbl">
-        <thead><tr><th class="l">IP</th><th>Заходов</th><th>Страниц</th>
-          <th class="l">Первый визит</th><th class="l">Последний визит</th></tr></thead>
-        <tbody>
-        {% for v in visitors %}
-          <tr><td class="ip">{{ v.ip or "—" }}</td>
-            <td>{{ v.hits }}</td><td>{{ v.pages }}</td>
-            <td>{{ v.first|dt }}</td><td>{{ v.last|dt }}</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
+  {# ============================================================ ОБЗОР #}
+  <div class="tab-content{% if tab == 'overview' %} is-active{% endif %}" id="tab-overview">
+    <div class="stats">
+      <div class="sc">
+        <div class="sc__val">{{ users.total_devices }}</div>
+        <div class="sc__lbl">Устройств всего</div>
+      </div>
+      <div class="sc">
+        <div class="sc__val sc__val--green">{{ users.today_devices }}</div>
+        <div class="sc__lbl">Сегодня активных</div>
+      </div>
+      <div class="sc">
+        <div class="sc__val sc__val--blue">{{ users.week_devices }}</div>
+        <div class="sc__lbl">За неделю</div>
+      </div>
+      <div class="sc">
+        <div class="sc__val sc__val--purple">{{ users.month_devices }}</div>
+        <div class="sc__lbl">За месяц</div>
+      </div>
+      <div class="sc">
+        <div class="sc__val sc__val--orange">{{ users.today_visits }}</div>
+        <div class="sc__lbl">Заходов сегодня</div>
+      </div>
+      <div class="sc">
+        <div class="sc__val">{{ users.registered_users }}</div>
+        <div class="sc__lbl">Зарегистрированных</div>
+      </div>
     </div>
-  </section>
 
-  <section class="card">
-    <div class="card__head"><span class="card__title">Популярные страницы</span></div>
-    <div class="table-wrap">
-      <table class="tbl">
-        <thead><tr><th class="l">Страница</th><th>Заходов</th></tr></thead>
-        <tbody>
-        {% for p in pages %}
-          <tr><td class="l">{{ p.path }}</td><td>{{ p.n }}</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
+    <div class="stats">
+      <div class="sc">
+        <div class="sc__val sc__val--blue">{{ content.leagues }}</div>
+        <div class="sc__lbl">Лиг</div>
+      </div>
+      <div class="sc">
+        <div class="sc__val sc__val--green">{{ content.teams }}</div>
+        <div class="sc__lbl">Команд</div>
+      </div>
+      <div class="sc">
+        <div class="sc__val">{{ content.fixtures }}</div>
+        <div class="sc__lbl">Матчей</div>
+      </div>
+      <div class="sc">
+        <div class="sc__val sc__val--purple">{{ content.players_with_photo }} / {{ content.players_total }}</div>
+        <div class="sc__lbl">Фото игроков</div>
+        {% set pct = (content.players_with_photo * 100 / content.players_total) | int if content.players_total else 0 %}
+        <div class="bar"><div class="bar__fill bar__fill--green" style="width:{{ pct }}%"></div></div>
+        <div class="sc__sub">{{ pct }}% покрытие</div>
+      </div>
     </div>
-  </section>
 
-  <section class="card">
-    <div class="card__head"><span class="card__title">Последние заходы</span></div>
-    <div class="table-wrap">
-      <table class="tbl">
-        <thead><tr><th class="l">Время</th><th class="l">IP</th><th class="l">Страница</th>
-          <th class="l">Браузер</th></tr></thead>
-        <tbody>
-        {% for r in recent %}
-          <tr><td>{{ r.ts|dt }}</td><td class="ip">{{ r.ip or "—" }}</td>
-            <td class="l">{{ r.path }}</td><td class="ua">{{ r.ua or "—" }}</td></tr>
-        {% endfor %}
-        </tbody>
-      </table>
+    {% set af = api.api_football %}
+    <div class="card">
+      <div class="card__head">
+        <span class="card__title">API-Football бюджет</span>
+        <span class="card__count">{{ af.used }} / {{ af.soft_limit }}</span>
+      </div>
+      <div style="padding: 16px;">
+        {% set used_pct = (af.used * 100 / af.soft_limit) | int if af.soft_limit else 0 %}
+        <div class="bar" style="height: 12px;">
+          <div class="bar__fill {% if used_pct > 85 %}bar__fill--red{% elif used_pct > 60 %}bar__fill--yellow{% else %}bar__fill--green{% endif %}"
+               style="width:{{ used_pct }}%"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--text-3);">
+          <span>Использовано: {{ af.used }}</span>
+          <span>Осталось: {{ af.remaining }}</span>
+        </div>
+      </div>
     </div>
-  </section>
+
+    {% set fd = api.fd %}
+    <div class="card">
+      <div class="card__head">
+        <span class="card__title">football-data.org</span>
+        {% if fd.running %}
+          <span class="tag tag--ok">работает</span>
+        {% else %}
+          <span class="tag tag--err">остановлен</span>
+        {% endif %}
+        {% if fd.live_mode %}
+          <span class="tag tag--info">LIVE</span>
+        {% endif %}
+      </div>
+      <div style="padding: 16px; display: flex; gap: 32px; align-items: center; flex-wrap: wrap;">
+        <div>
+          <span style="font-size: 11px; color: var(--text-3);">Лимит</span>
+          <div style="font-size: 18px; font-weight: 900; font-family: var(--ff-num);">10<span style="font-size:12px;color:var(--text-3);"> / мин</span></div>
+        </div>
+        <div>
+          <span style="font-size: 11px; color: var(--text-3);">Доступно</span>
+          <div style="font-size: 18px; font-weight: 900; font-family: var(--ff-num); color: var(--green);">{{ fd.available_minute if fd.available_minute is not none else '—' }}</div>
+        </div>
+        <div>
+          <span style="font-size: 11px; color: var(--text-3);">Лиг</span>
+          <div style="font-size: 18px; font-weight: 900; font-family: var(--ff-num); color: var(--blue);">{{ fd.leagues }}</div>
+        </div>
+        <div style="font-size: 12px; color: var(--text-3);">
+          Тик: <strong>{{ fd.last_tick|ago }}</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ============================================================ ПОЛЬЗОВАТЕЛИ #}
+  <div class="tab-content{% if tab == 'users' %} is-active{% endif %}" id="tab-users">
+    <div class="stats">
+      <div class="sc">
+        <div class="sc__val">{{ users.total_devices }}</div>
+        <div class="sc__lbl">Устройств за всё время</div>
+      </div>
+      <div class="sc">
+        <div class="sc__val sc__val--green">{{ users.today_devices }}</div>
+        <div class="sc__lbl">Сегодня</div>
+        <div class="sc__sub">+{{ users.today_new_devices }} новых</div>
+      </div>
+      <div class="sc">
+        <div class="sc__val sc__val--blue">{{ users.week_devices }}</div>
+        <div class="sc__lbl">За неделю</div>
+      </div>
+      <div class="sc">
+        <div class="sc__val sc__val--purple">{{ users.month_devices }}</div>
+        <div class="sc__lbl">За месяц</div>
+      </div>
+      <div class="sc">
+        <div class="sc__val sc__val--orange">{{ users.total_visits }}</div>
+        <div class="sc__lbl">Заходов всего</div>
+      </div>
+      <div class="sc">
+        <div class="sc__val">{{ users.registered_users }}</div>
+        <div class="sc__lbl">Через Telegram</div>
+      </div>
+    </div>
+
+    <section class="card">
+      <div class="card__head">
+        <span class="card__title">Устройства</span>
+        <span class="card__count">{{ devices|length }}</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Устройство</th>
+            <th class="num">Заходов</th>
+            <th>Первый визит</th>
+            <th>Последний визит</th>
+          </tr></thead>
+          <tbody>
+          {% for d in devices %}
+            <tr>
+              <td><strong>{{ d.device_name or "Неизвестно" }}</strong></td>
+              <td class="num">{{ d.visits }}</td>
+              <td class="mono">{{ d.first_seen|dt }}</td>
+              <td class="mono">{{ d.last_seen|ago }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card__head">
+        <span class="card__title">Популярные страницы (24ч)</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Страница</th><th class="num">Заходов</th></tr></thead>
+          <tbody>
+          {% for p in pages %}
+            <tr><td>{{ p.path }}</td><td class="num">{{ p.n }}</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  {# ============================================================ КОНТЕНТ #}
+  <div class="tab-content{% if tab == 'content' %} is-active{% endif %}" id="tab-content">
+    <div class="stats">
+      <div class="sc">
+        <div class="sc__val sc__val--blue">{{ content.leagues }}</div>
+        <div class="sc__lbl">Лиг / турниров</div>
+      </div>
+      <div class="sc">
+        <div class="sc__val sc__val--green">{{ content.teams }}</div>
+        <div class="sc__lbl">Команд</div>
+      </div>
+      <div class="sc">
+        <div class="sc__val">{{ content.fixtures }}</div>
+        <div class="sc__lbl">Матчей в базе</div>
+      </div>
+      <div class="sc">
+        <div class="sc__val sc__val--orange">{{ content.odds_active }}</div>
+        <div class="sc__lbl">Активных коэффициентов</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__head"><span class="card__title">Игроки</span></div>
+      <div style="padding: 16px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div>
+            <div style="font-size: 12px; color: var(--text-3); margin-bottom: 4px;">Всего в базе</div>
+            <div style="font-size: 24px; font-weight: 900; font-family: var(--ff-num);">{{ content.players_total }}</div>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: var(--text-3); margin-bottom: 4px;">С русским именем</div>
+            <div style="font-size: 24px; font-weight: 900; font-family: var(--ff-num); color: var(--blue);">{{ content.players_found_ru }}</div>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: var(--text-3); margin-bottom: 4px;">С фото</div>
+            <div style="font-size: 24px; font-weight: 900; font-family: var(--ff-num); color: var(--green);">{{ content.players_with_photo }}</div>
+            {% set pct = (content.players_with_photo * 100 / content.players_total) | int if content.players_total else 0 %}
+            <div class="bar"><div class="bar__fill bar__fill--green" style="width:{{ pct }}%"></div></div>
+            <div style="font-size: 11px; color: var(--text-3); margin-top: 2px;">{{ pct }}%</div>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: var(--text-3); margin-bottom: 4px;">Проверено в Wikidata</div>
+            <div style="font-size: 24px; font-weight: 900; font-family: var(--ff-num); color: var(--purple);">{{ content.players_checked }}</div>
+            {% set cpct = (content.players_checked * 100 / content.players_total) | int if content.players_total else 0 %}
+            <div class="bar"><div class="bar__fill bar__fill--blue" style="width:{{ cpct }}%"></div></div>
+            <div style="font-size: 11px; color: var(--text-3); margin-top: 2px;">{{ cpct }}%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__head"><span class="card__title">Лиги</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Лига</th><th>Страна</th><th>Код</th><th class="num">Сезон</th></tr></thead>
+          <tbody>
+          {% for l in leagues_config %}
+            <tr>
+              <td><strong>{{ l.name_ru }}</strong></td>
+              <td class="dim">{{ l.country_ru }}</td>
+              <td class="mono">{{ l.code }}</td>
+              <td class="num">{{ l.season }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {# ============================================================ API и ПАРСЕРЫ #}
+  <div class="tab-content{% if tab == 'api' %} is-active{% endif %}" id="tab-api">
+    {% set af = api.api_football %}
+
+    <div class="card">
+      <div class="card__head">
+        <span class="card__title">API-Football</span>
+        <span class="tag tag--info">{{ af.day }}</span>
+      </div>
+      <div style="padding: 16px;">
+        {% set used_pct = (af.used * 100 / af.soft_limit) | int if af.soft_limit else 0 %}
+        <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
+          <span>Использовано: <strong>{{ af.used }}</strong> / {{ af.soft_limit }}</span>
+          <span>API remaining: <strong>{{ af.api_remaining if af.api_remaining is not none else '—' }}</strong></span>
+        </div>
+        <div class="bar" style="height: 12px;">
+          <div class="bar__fill {% if used_pct > 85 %}bar__fill--red{% elif used_pct > 60 %}bar__fill--yellow{% else %}bar__fill--green{% endif %}"
+               style="width:{{ used_pct }}%"></div>
+        </div>
+
+        <div style="margin-top: 16px;">
+          <div style="font-size: 12px; color: var(--text-3); margin-bottom: 8px; font-weight: 700;">Расход по корзинам</div>
+          {% for pool_name, pool in af.pools.items() %}
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border);">
+            <span style="font-weight: 600;">{{ pool_name }}</span>
+            <span class="mono">{{ pool.used }} / {{ pool.allowance }} (осталось {{ pool.left }})</span>
+          </div>
+          {% endfor %}
+        </div>
+
+        {% if af.by_task %}
+        <div style="margin-top: 16px;">
+          <div style="font-size: 12px; color: var(--text-3); margin-bottom: 8px; font-weight: 700;">Расход по задачам</div>
+          {% for task, count in af.by_task.items() %}
+          <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+            <span class="mono">{{ task }}</span>
+            <span class="num" style="min-width: 40px;">{{ count }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% set fd = api.fd %}
+    <div class="card">
+      <div class="card__head">
+        <span class="card__title">football-data.org</span>
+        {% if fd.running %}
+          <span class="tag tag--ok">работает</span>
+        {% else %}
+          <span class="tag tag--err">остановлен</span>
+        {% endif %}
+        {% if fd.live_mode %}
+          <span class="tag tag--info">LIVE</span>
+        {% endif %}
+      </div>
+      <div style="padding: 16px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 12px;">
+          <div>
+            <div style="font-size: 12px; color: var(--text-3); margin-bottom: 4px;">Лимит</div>
+            <div style="font-size: 20px; font-weight: 900; font-family: var(--ff-num);">10 / мин</div>
+            <div style="font-size: 11px; color: var(--text-3);">мягкий: 8 / мин</div>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: var(--text-3); margin-bottom: 4px;">Доступно сейчас</div>
+            <div style="font-size: 20px; font-weight: 900; font-family: var(--ff-num); color: var(--green);">{{ fd.available_minute if fd.available_minute is not none else '—' }}</div>
+            <div style="font-size: 11px; color: var(--text-3);">запросов в минуту</div>
+          </div>
+          <div>
+            <div style="font-size: 12px; color: var(--text-3); margin-bottom: 4px;">Лиг</div>
+            <div style="font-size: 20px; font-weight: 900; font-family: var(--ff-num); color: var(--blue);">{{ fd.leagues }}</div>
+            <div style="font-size: 11px; color: var(--text-3);">без суточного лимита</div>
+          </div>
+        </div>
+        <div style="font-size: 12px; color: var(--text-3);">
+          Последний тик: <strong>{{ fd.last_tick|ago }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__head"><span class="card__title">Интервалы синхронизации</span></div>
+      <div style="padding: 16px;">
+        <div class="irow">
+          <span class="irow__name">API-Football: live (Лигаи Олӣ)</span>
+          <span class="irow__val">{{ intervals.api_football_live }}с ({{ (intervals.api_football_live / 60) | round(1) }} мин)</span>
+        </div>
+        <div class="irow">
+          <span class="irow__name">API-Football: live (прочие)</span>
+          <span class="irow__val">{{ intervals.api_football_live_other }}с ({{ (intervals.api_football_live_other / 60) | round(1) }} мин)</span>
+        </div>
+        <div class="irow">
+          <span class="irow__name">football-data: live</span>
+          <span class="irow__val">{{ intervals.fd_live }}с</span>
+        </div>
+        <div class="irow">
+          <span class="irow__name">football-data: таблицы</span>
+          <span class="irow__val">{{ intervals.fd_standings }}с ({{ (intervals.fd_standings / 60) | round(0) | int }} мин)</span>
+        </div>
+        <div class="irow">
+          <span class="irow__name">football-data: бомбардиры</span>
+          <span class="irow__val">{{ intervals.fd_scorers }}с ({{ (intervals.fd_scorers / 3600) | round(1) }} ч)</span>
+        </div>
+        <div class="irow">
+          <span class="irow__name">Парсер FORMULA55 (коэф.)</span>
+          <span class="irow__val">{{ intervals.odds }}с ({{ (intervals.odds / 3600) | round(1) }} ч), пауза {{ intervals.odds_gap }}с</span>
+        </div>
+        <div class="irow">
+          <span class="irow__name">Портреты (Викисклад)</span>
+          <span class="irow__val">{{ intervals.photos }}с ({{ (intervals.photos / 60) | round(0) | int }} мин), пачка {{ intervals.photos_batch }}</span>
+        </div>
+        <div class="irow">
+          <span class="irow__name">Wikidata имена</span>
+          <span class="irow__val">{{ intervals.wikidata }}с ({{ (intervals.wikidata / 3600) | round(1) }} ч)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__head">
+        <span class="card__title">Состояние синхронизации</span>
+        <span class="card__count">{{ api.sync_states|length }}</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Задача</th>
+            <th>Последний запуск</th>
+            <th>Последний OK</th>
+            <th>Ошибка</th>
+            <th>Примечание</th>
+          </tr></thead>
+          <tbody>
+          {% for key, s in api.sync_states.items() %}
+            <tr>
+              <td class="sync-key">{{ key }}</td>
+              <td class="mono">{{ s.last_run|ago }}</td>
+              <td class="mono">
+                {% if s.last_ok %}
+                  <span class="tag tag--ok">{{ s.last_ok|ago }}</span>
+                {% else %}
+                  <span class="tag tag--warn">никогда</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if s.last_error %}
+                  <span class="tag tag--err" title="{{ s.last_error }}">ошибка</span>
+                {% else %}
+                  <span class="dim">—</span>
+                {% endif %}
+              </td>
+              <td class="sync-note" title="{{ s.note or '' }}">{{ s.note or "—" }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
+
+<script>
+document.querySelectorAll('.tabs__btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tabs__btn').forEach(b => b.classList.remove('is-active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('is-active');
+    history.replaceState(null, '', '?tab=' + btn.dataset.tab);
+  });
+});
+</script>
 </body>
 </html>
