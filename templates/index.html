@@ -4,11 +4,13 @@
 {% block tabs %}
 <div class="tabs-bar">
   <div class="tabs-bar__in" id="tabs">
-    <button class="tab tab--live" data-tab="live">
-      <span data-i18n="tab.live">LIVE</span><span class="tab__count" id="cntLive">0</span>
-    </button>
-    <button class="tab" data-tab="all" data-i18n="tab.all">Все</button>
-    <span class="tabs-sep"></span>
+    <span class="tabs-fixed">
+      <button class="tab tab--live" data-tab="live">
+        <span data-i18n="tab.live">LIVE</span><span class="tab__count" id="cntLive">0</span>
+      </button>
+      <button class="tab" data-tab="all" data-i18n="tab.all">Все</button>
+      <span class="tabs-sep"></span>
+    </span>
     <!-- ленту дат (±7 дней) строит home.js: она зависит от часового пояса -->
     <span class="tabs-days" id="tabsDays"></span>
   </div>
@@ -20,6 +22,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/home.js?v=7"></script>
+<script src="/static/js/home.js?v=9"></script>
 <script>App.init(); Home.init();</script>
 {% endblock %}

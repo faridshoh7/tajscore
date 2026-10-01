@@ -1,6 +1,7 @@
 """JSON API сайта. Читает ТОЛЬКО SQLite — наружу отсюда запросов нет."""
 from fastapi import APIRouter, HTTPException, Query
 
+from app import ads as ads_store
 from app import analytics, budget, db
 from app.config import DEFAULT_TZ
 from app.services import feed as feed_svc
@@ -87,6 +88,12 @@ def status():
     counts = {t: db.query_one(f"SELECT COUNT(*) n FROM {t}")["n"]
               for t in ("fixtures", "teams", "fixture_events", "standings", "player_stats")}
     return {"worker": worker.status(), "db": counts, "budget": budget.stats()}
+
+
+@router.get("/ads")
+def ads():
+    """Рекламные блоки из data/ads.json. Пустой список = показываем заглушку."""
+    return ads_store.active()
 
 
 @router.get("/health")

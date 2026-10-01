@@ -7,124 +7,175 @@
 :root {
   /* фирменные цвета */
   --yellow:        #FFCC00;
-  --yellow-soft:   #FFE066;
-  --yellow-deep:   #E6A800;
+  --yellow-soft:   #FFE98A;
+  --yellow-deep:   #E0A200;
   --blue:          #2D6BFF;
   --blue-deep:     #1B4FD8;
   --blue-soft:     #6E9BFF;
   --green:         #26D07C;
-  --red:           #FF4D5E;
+  --red:           #FF4257;
 
   /* поверхности (тёмная тема) */
-  --bg:            #070B14;
-  --bg-grad:       radial-gradient(1200px 600px at 50% -10%, #12203F 0%, #070B14 60%);
-  --surface:       #0E1524;
-  --surface-2:     #131C2F;
+  --bg:            #060A12;
+  --bg-grad:
+    radial-gradient(900px 480px at 12% -8%, rgba(45,107,255,.16) 0%, transparent 62%),
+    radial-gradient(760px 420px at 88% -6%, rgba(255,204,0,.10) 0%, transparent 60%),
+    linear-gradient(180deg, #0B1322 0%, #060A12 46%);
+  --surface:       #0D1524;
+  --surface-2:     #121B2D;
   --surface-3:     #1A2540;
-  --hover:         #182444;
-  --border:        #1E2A44;
-  --border-soft:   #16203551;
+  --hover:         #17233E;
+  --border:        #1E2B47;
+  --border-soft:   #18223A;
+  --glass:         rgba(9, 14, 26, .82);
 
   /* текст */
-  --text:          #EAF0FF;
-  --text-2:        #A7B4CE;
-  --text-3:        #6E7C99;
+  --text:          #EDF2FF;
+  --text-2:        #A3B1CC;
+  --text-3:        #6B7994;
 
   /* зоны таблицы */
   --zone-ucl:      #2D6BFF;
   --zone-uel:      #FF9F1C;
   --zone-uecl:     #26D07C;
   --zone-playoff:  #8E7CFF;
-  --zone-releg:    #FF4D5E;
+  --zone-releg:    #FF4257;
   --zone-acl:      #2D6BFF;   /* Лига чемпионов АФК */
   --zone-acl2:     #FF9F1C;   /* Лига чемпионов АФК-2 */
 
   /* геометрия */
-  --r-sm: 6px; --r: 10px; --r-lg: 14px; --r-xl: 20px;
-  --shadow:    0 4px 24px rgba(0,0,0,.35);
-  --shadow-lg: 0 18px 50px rgba(0,0,0,.5);
-  --ring: 0 0 0 2px rgba(45,107,255,.35);
+  --r-sm: 7px; --r: 11px; --r-lg: 16px; --r-xl: 22px;
+  --shadow:    0 2px 8px rgba(0,0,0,.24), 0 12px 32px rgba(0,0,0,.26);
+  --shadow-lg: 0 18px 54px rgba(0,0,0,.55);
+  --ring: 0 0 0 3px rgba(45,107,255,.28);
+  --hairline: inset 0 1px 0 rgba(255,255,255,.035);
 
-  --col-left: 250px;
-  --col-right: 320px;
-  --hdr-h: 60px;
-  --tabs-h: 46px;
+  --col-left: 258px;
+  --col-right: 330px;
+  --hdr-h: 64px;
+  --tabs-h: 50px;
+  --gutter: 16px;
 
   /* «Noto Sans» в списке ради таджикских букв ӯ ҳ ҷ қ ғ: на Linux и части
      Android-сборок системный шрифт по умолчанию их рисует не во всех начертаниях. */
   --ff: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", "Helvetica Neue", Arial, sans-serif;
-  --ff-num: "SF Mono", ui-monospace, "Roboto Mono", "DejaVu Sans Mono", monospace;
+  /* Цифры счёта, минут и таблиц. Раньше тут был моноширинный шрифт — счёт из-за
+     него выглядел распечаткой. Inter даёт табличные цифры той же ширины
+     (font-variant-numeric ниже), колонки не пляшут, а текст остаётся живым. */
+  --ff-num: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --ff-display: "Archivo Black", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Всё, что набрано «числовым» шрифтом, печатается табличными цифрами:
+   ширина знака одинаковая, поэтому счёт и минуты не дёргаются при смене. */
+.mono, .match__time, .match__score, .mscore__val, .tbl .num, .tbl .c-rank,
+.tbl .c-pts, .prow__val, .prow__rank, .tab--day, .league-item__badge,
+.league-block__count, .tl__min, .stat__num, .bench__num, .bracket__team b {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "cv05" 1;
 }
 
 /* светлая тема */
 [data-theme="light"] {
-  --bg:          #EEF1F7;
-  --bg-grad:     radial-gradient(1200px 600px at 50% -10%, #DCE6FB 0%, #EEF1F7 60%);
+  --bg:          #EFF2F8;
+  --bg-grad:
+    radial-gradient(900px 460px at 12% -8%, rgba(45,107,255,.14) 0%, transparent 62%),
+    radial-gradient(760px 400px at 88% -6%, rgba(255,204,0,.16) 0%, transparent 60%),
+    linear-gradient(180deg, #E4EBFA 0%, #EFF2F8 44%);
   --surface:     #FFFFFF;
-  --surface-2:   #F5F7FC;
-  --surface-3:   #EAEFF8;
-  --hover:       #E7EDFA;
-  --border:      #DCE3F0;
-  --border-soft: #E8EDF7;
-  --text:        #0D1526;
-  --text-2:      #4A5670;
-  --text-3:      #8A94AB;
-  --yellow-deep: #B98600;
-  --shadow:      0 2px 14px rgba(20,35,80,.10);
-  --shadow-lg:   0 16px 40px rgba(20,35,80,.16);
+  --surface-2:   #F4F7FD;
+  --surface-3:   #E8EEF9;
+  --hover:       #EDF2FD;
+  --border:      #DDE4F1;
+  --border-soft: #E9EEF8;
+  --glass:       rgba(255,255,255,.86);
+  --text:        #0C1424;
+  --text-2:      #4C5872;
+  --text-3:      #8590A8;
+  --yellow-deep: #B27F00;
+  --shadow:      0 1px 2px rgba(20,35,80,.06), 0 8px 26px rgba(20,35,80,.09);
+  --shadow-lg:   0 18px 48px rgba(20,35,80,.18);
+  --hairline:    inset 0 1px 0 rgba(255,255,255,.7);
 }
 
 /* ------------------------------------------------------------------ база */
-*, *::before, *::after { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: border-box; min-width: 0; }
+
+/* Страница ездит только вверх-вниз. Правило держится на трёх вещах:
+   1) html и body обрезаны по ширине;
+   2) каждый элемент по умолчанию `min-width: 0` (строка выше) — без этого
+      длинное название команды растягивает grid-колонку шире экрана;
+   3) всё широкое (таблицы, сетка плей-офф, ленты вкладок) скроллится ВНУТРИ
+      себя и помечено `overscroll-behavior-x: contain`, чтобы жест не
+      перетекал на страницу.
+   Проверять после любой правки: document.documentElement.scrollWidth
+   должен равняться clientWidth на любой ширине окна. */
 html {
   -webkit-text-size-adjust: 100%;
-  /* Страница прокручивается только вертикально. Любой широкий элемент
-     (таблица, сетка плей-офф) скроллится ВНУТРИ себя, а не тянет весь макет. */
   overflow-x: hidden;
+  width: 100%;
   max-width: 100%;
+  scroll-behavior: smooth;
 }
 body {
   margin: 0;
-  overflow-x: hidden;
+  width: 100%;
   max-width: 100%;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
   background: var(--bg);
   background-image: var(--bg-grad);
   background-attachment: fixed;
+  background-repeat: no-repeat;
   color: var(--text);
   font: 400 14px/1.45 var(--ff);
   letter-spacing: .1px;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
   overflow-y: scroll;
 }
 a { color: inherit; text-decoration: none; }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
-img { display: block; }
+img, video, svg, canvas, iframe { display: block; max-width: 100%; }
 ::selection { background: var(--yellow); color: #10161f; }
+
+/* Видимая рамка фокуса — для тех, кто ходит по сайту с клавиатуры */
+:focus-visible { outline: 2px solid var(--blue-soft); outline-offset: 2px; border-radius: 6px; }
 
 /* скроллбары */
 * { scrollbar-width: thin; scrollbar-color: var(--surface-3) transparent; }
-*::-webkit-scrollbar { width: 8px; height: 8px; }
-*::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 8px; }
-*::-webkit-scrollbar-thumb:hover { background: var(--border); }
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 9px; border: 2px solid transparent; background-clip: padding-box; }
+*::-webkit-scrollbar-thumb:hover { background: var(--border); background-clip: padding-box; }
 *::-webkit-scrollbar-track { background: transparent; }
 
 /* ------------------------------------------------------------------ шапка */
 .hdr {
   position: sticky; top: 0; z-index: 60;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: saturate(160%) blur(14px);
+  background: var(--glass);
+  backdrop-filter: saturate(180%) blur(18px);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
   border-bottom: 1px solid var(--border);
 }
+/* Тонкая фирменная нить под шапкой: жёлтый → синий. Отделяет шапку от ленты
+   лучше, чем ещё одна серая линия, и задаёт цвет всему сайту. */
+.hdr::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px;
+  background: linear-gradient(90deg, var(--yellow) 0%, var(--yellow-deep) 22%, var(--blue) 62%, var(--green) 100%);
+  opacity: .9;
+}
 .hdr__in {
+  position: relative;
   max-width: 1600px; margin: 0 auto; height: var(--hdr-h);
-  padding: 0 16px;
-  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 18px;
+  padding: 0 var(--gutter);
+  display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 18px;
 }
 /* на внутренних страницах слева добавляется кнопка «назад» — колонок становится четыре */
-.hdr__in--back { grid-template-columns: auto auto 1fr auto; gap: 12px; }
+.hdr__in--back { grid-template-columns: auto auto minmax(0,1fr) auto; gap: 12px; }
 
 .btn-back {
-  display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0;
+  display: grid; place-items: center; width: 38px; height: 38px; flex-shrink: 0;
   border-radius: 50%; color: var(--text-2);
   background: var(--surface-2); border: 1px solid var(--border);
   transition: background .16s, color .16s, transform .16s, border-color .16s;
@@ -150,199 +201,360 @@ img { display: block; }
   transform: translateY(-2px);
 }
 
-/* логотип + название */
-.brand { display: flex; align-items: center; gap: 11px; flex-shrink: 0; }
-.brand__logo {
-  width: 38px; height: 38px; border-radius: 50%; overflow: hidden;
-  display: grid; place-items: center; flex-shrink: 0;
-  background: conic-gradient(from 220deg, var(--yellow), var(--green) 35%, var(--blue) 70%, var(--yellow));
-  box-shadow: 0 0 0 2px rgba(255,204,0,.25), 0 6px 18px rgba(45,107,255,.28);
-  transition: transform .25s cubic-bezier(.34,1.56,.64,1);
-}
-.brand:hover .brand__logo { transform: rotate(-8deg) scale(1.06); }
-.brand__logo img { width: 100%; height: 100%; object-fit: cover; }
-.brand__name {
-  font-size: 26px; font-weight: 900; letter-spacing: 1.2px; line-height: 1;
-  background: linear-gradient(180deg, var(--yellow-soft) 0%, var(--yellow) 55%, var(--yellow-deep) 100%);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  text-shadow: 0 2px 18px rgba(255,204,0,.22);
-}
+/* ------------------------------------------------- логотип и надпись TAJSCORE */
+.brand { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 
-/* поиск */
-.search { position: relative; max-width: 480px; width: 100%; justify-self: center; }
+/* Картинка логотипа уже круглая и с прозрачным фоном (static/img/logo-round.png:
+   исходный квадрат обрезан по окружности скриптом). Здесь остаётся только
+   подсветка вокруг — тонкое кольцо и мягкое свечение, как у эмблемы на форме. */
+.brand__logo {
+  position: relative; width: 42px; height: 42px; flex-shrink: 0;
+  border-radius: 50%;
+  transition: transform .3s cubic-bezier(.34,1.56,.64,1), filter .3s;
+  filter: drop-shadow(0 4px 14px rgba(255,204,0,.28));
+}
+.brand__logo::before {
+  content: ""; position: absolute; inset: -3px; border-radius: 50%;
+  background: conic-gradient(from 210deg, var(--yellow), var(--green) 34%, var(--blue) 68%, var(--yellow));
+  opacity: .55; filter: blur(4px); z-index: -1;
+  transition: opacity .3s;
+}
+.brand__logo img {
+  width: 100%; height: 100%; border-radius: 50%;
+  object-fit: cover; object-position: center;
+}
+.brand:hover .brand__logo { transform: rotate(-7deg) scale(1.07); }
+.brand:hover .brand__logo::before { opacity: .95; }
+
+/* Надпись набрана Archivo Black — плотный гротеск, каким подписывают табло.
+   Системный жирный Inter/Arial на её месте читался как обычный заголовок. */
+.brand__name {
+  font-family: var(--ff-display);
+  /* 900, а не 400: у Archivo Black одно начертание и вес ему безразличен,
+     зато запасной Inter/системный шрифт останется таким же плотным,
+     пока Archivo Black грузится или если он не загрузился вовсе. */
+  font-size: 25px; font-weight: 900;
+  letter-spacing: .6px; line-height: 1;
+  background: linear-gradient(174deg, #FFF6CF 0%, var(--yellow) 38%, var(--yellow-deep) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 10px rgba(255,204,0,.28));
+  white-space: nowrap;
+}
+/* На белом фоне фирменный жёлтый почти не читается, поэтому в светлой теме
+   надпись уходит в глубокую охру — цвет тот же, контраст рабочий. */
+[data-theme="light"] .brand__name {
+  background: linear-gradient(174deg, #D99400 0%, #B87A00 52%, #8E5C00 100%);
+  -webkit-background-clip: text; background-clip: text;
+  filter: none;
+}
+/* Пока Archivo Black грузится, надпись рисует системный шрифт — с обычным
+   трекингом она была бы заметно шире и дёргала бы шапку. */
+.brand__name { font-synthesis-weight: none; }
+
+/* ------------------------------------------------------------------ поиск */
+.search { position: relative; max-width: 520px; width: 100%; justify-self: center; min-width: 0; }
 .search__field {
-  display: flex; align-items: center; gap: 9px;
+  display: flex; align-items: center; gap: 10px;
   background: var(--surface-2); border: 1px solid var(--border);
-  border-radius: 999px; padding: 0 14px; height: 38px;
+  border-radius: 999px; padding: 0 16px; height: 40px;
+  box-shadow: var(--hairline);
   transition: border-color .18s, box-shadow .18s, background .18s;
 }
+.search__field:hover { border-color: var(--surface-3); }
 .search__field:focus-within { border-color: var(--blue); box-shadow: var(--ring); background: var(--surface); }
 .search__field svg { flex-shrink: 0; color: var(--text-3); }
+.search__field:focus-within svg { color: var(--blue-soft); }
 .search input {
   flex: 1; background: none; border: 0; outline: none; color: var(--text);
   font: inherit; min-width: 0;
 }
 .search input::placeholder { color: var(--text-3); }
 .search__results {
-  position: absolute; top: calc(100% + 8px); left: 0; right: 0;
+  position: absolute; top: calc(100% + 10px); left: 0; right: 0;
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
   box-shadow: var(--shadow-lg); overflow: hidden; max-height: 70vh; overflow-y: auto;
-  opacity: 0; transform: translateY(-6px); pointer-events: none;
+  opacity: 0; transform: translateY(-8px) scale(.985); pointer-events: none;
   transition: opacity .16s, transform .16s;
 }
 .search__results.is-open { opacity: 1; transform: none; pointer-events: auto; }
 .search__group { padding: 6px 0; border-bottom: 1px solid var(--border-soft); }
 .search__group:last-child { border-bottom: 0; }
 .search__label {
-  padding: 6px 14px 4px; font-size: 10.5px; font-weight: 700;
-  letter-spacing: .8px; text-transform: uppercase; color: var(--text-3);
+  padding: 8px 15px 4px; font-size: 10.5px; font-weight: 800;
+  letter-spacing: .9px; text-transform: uppercase; color: var(--text-3);
 }
 .search__item {
-  display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+  display: flex; align-items: center; gap: 11px; padding: 9px 15px;
   cursor: pointer; transition: background .12s;
 }
 .search__item:hover { background: var(--hover); }
 .search__item img { width: 20px; height: 20px; object-fit: contain; }
-.search__item small { color: var(--text-3); margin-left: auto; font-size: 11.5px; }
+.search__item > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search__item small { color: var(--text-3); margin-left: auto; font-size: 11.5px; flex-shrink: 0; }
+
+/* Крестик внутри поля и кнопка-лупа нужны только на телефоне,
+   где поиск раскрывается поверх шапки (см. медиазапрос ниже). */
+.search__close { display: none; flex-shrink: 0; color: var(--text-3); padding: 0; }
+.search__close:hover { color: var(--text); }
+.icon-btn--search { display: none; }
 
 /* кнопки шапки */
 .hdr__actions { display: flex; align-items: center; gap: 8px; }
 .icon-btn {
-  width: 38px; height: 38px; border-radius: 10px;
-  display: grid; place-items: center;
+  width: 38px; height: 38px; border-radius: 12px;
+  display: grid; place-items: center; flex-shrink: 0;
   background: var(--surface-2); border: 1px solid var(--border);
-  color: var(--text-2);
+  color: var(--text-2); box-shadow: var(--hairline);
   transition: background .16s, color .16s, border-color .16s, transform .16s;
 }
 .icon-btn:hover { background: var(--hover); color: var(--text); transform: translateY(-1px); }
-.icon-btn.is-active { color: var(--yellow); border-color: var(--yellow-deep); }
+.icon-btn:active { transform: translateY(0) scale(.95); }
+.icon-btn.is-active { color: #0A0E18; background: var(--yellow); border-color: var(--yellow); }
 .icon-btn--gear:hover svg { transform: rotate(60deg); }
 .icon-btn svg { transition: transform .35s ease; }
 
 /* ------------------------------------------------------------------ вкладки */
 .tabs-bar {
   position: sticky; top: var(--hdr-h); z-index: 55;
-  background: color-mix(in srgb, var(--bg) 90%, transparent);
-  backdrop-filter: saturate(160%) blur(14px);
+  background: var(--glass);
+  backdrop-filter: saturate(180%) blur(18px);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
   border-bottom: 1px solid var(--border);
 }
 .tabs-bar__in {
-  max-width: 1600px; margin: 0 auto; padding: 0 16px; height: var(--tabs-h);
-  display: flex; align-items: center; gap: 6px; overflow-x: auto;
-  -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
-  scrollbar-width: none;
+  max-width: 1600px; margin: 0 auto; padding: 0 var(--gutter); height: var(--tabs-h);
+  display: flex; align-items: center; gap: 6px;
+  overflow: hidden;   /* прокручивается только лента дат внутри, не вся строка */
 }
-.tabs-bar__in::-webkit-scrollbar { display: none; }
+/* «LIVE» и «Все» никуда не уезжают: это главные переключатели ленты, и терять
+   их при прокрутке дат — то же, что прятать кнопку «домой». */
+.tabs-fixed { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .tab {
-  position: relative; padding: 7px 15px; border-radius: 999px;
-  font-size: 13.5px; font-weight: 600; color: var(--text-2); white-space: nowrap;
-  transition: color .16s, background .16s;
+  position: relative; padding: 8px 16px; border-radius: 999px; flex-shrink: 0;
+  font-size: 13.5px; font-weight: 650; color: var(--text-2); white-space: nowrap;
+  border: 1px solid transparent;
+  transition: color .16s, background .16s, border-color .16s, transform .16s;
 }
-.tab:hover { color: var(--text); background: var(--surface-2); }
-.tab.is-active { color: #0A0E18; background: var(--yellow); font-weight: 700; }
+.tab:hover { color: var(--text); background: var(--surface-2); border-color: var(--border); }
+.tab.is-active {
+  color: #0A0E18; background: linear-gradient(180deg, var(--yellow-soft), var(--yellow));
+  border-color: var(--yellow-deep); font-weight: 800;
+  box-shadow: 0 3px 14px rgba(255,204,0,.28);
+}
 [data-theme="light"] .tab.is-active { color: #221900; }
 .tab__count {
-  display: inline-grid; place-items: center; min-width: 18px; height: 18px;
-  padding: 0 5px; margin-left: 6px; border-radius: 999px;
-  background: rgba(255,255,255,.12); font-size: 11px; font-weight: 700; font-family: var(--ff-num);
+  display: inline-grid; place-items: center; min-width: 19px; height: 19px;
+  padding: 0 6px; margin-left: 7px; border-radius: 999px;
+  background: rgba(255,255,255,.12); font-size: 11px; font-weight: 800; font-family: var(--ff-num);
 }
 .tab.is-active .tab__count { background: rgba(0,0,0,.18); }
-.tab--live .tab__count { background: var(--red); color: #fff; }
-.tab--live.is-active { background: var(--red); color: #fff; }
-.tab--live.is-active .tab__count { background: rgba(0,0,0,.22); }
+
+/* LIVE: красная точка бьётся, пока идут матчи */
+.tab--live { display: inline-flex; align-items: center; gap: 7px; }
+.tab--live::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--red); flex-shrink: 0;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.tab--live .tab__count { background: var(--red); color: #fff; margin-left: 2px; }
+.tab--live.is-active {
+  background: linear-gradient(180deg, #FF6072, var(--red)); color: #fff;
+  border-color: #D42C40; box-shadow: 0 3px 14px rgba(255,66,87,.34);
+}
+.tab--live.is-active::before { background: #fff; }
+.tab--live.is-active .tab__count { background: rgba(0,0,0,.24); }
 
 /* ---------------------------------------------------------------- лента дат */
 /* Разделитель между «Live / Все» и датами */
 .tabs-sep {
-  width: 1px; height: 22px; flex-shrink: 0; margin: 0 4px;
+  width: 1px; height: 24px; flex-shrink: 0; margin: 0 6px;
   background: var(--border);
 }
-.tabs-days { display: flex; align-items: center; gap: 6px; }
+.tabs-days {
+  /* position:relative обязателен: home.js центрирует активную дату через
+     offsetLeft, а тот считается от ближайшего позиционированного предка —
+     без этой строки отсчёт шёл бы от .tabs-bar и лента промахивалась. */
+  position: relative;
+  display: flex; align-items: center; gap: 6px;
+  flex: 1; min-width: 0; overflow-x: auto;
+  -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
+  scrollbar-width: none; scroll-behavior: smooth;
+  /* Лента дат длиннее экрана — по краям подтираем её градиентом, чтобы
+     обрезанная вкладка не выглядела сломанной вёрсткой. */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+  padding: 4px 0;   /* иначе маска срезает тень активной вкладки */
+}
+.tabs-days::-webkit-scrollbar { display: none; }
 
+/* День недели сверху, число снизу — так это устроено у Sofascore: глаз
+   цепляется за «пт/сб», а не пересчитывает даты. */
 .tab--day {
   display: grid; justify-items: center; gap: 1px;
-  padding: 5px 13px; line-height: 1.15;
-  font-family: var(--ff-num); font-size: 12.5px;
+  padding: 5px 14px; line-height: 1.12;
+  font-family: var(--ff-num); font-size: 13px;
 }
-.tab__day { font-weight: 700; }
-.tab__dow { font-size: 9.5px; text-transform: uppercase; letter-spacing: .5px; opacity: .65; }
-.tab--day.is-active .tab__dow { opacity: .8; }
+.tab__day { font-weight: 750; }
+.tab__dow { font-size: 9.5px; text-transform: uppercase; letter-spacing: .6px; opacity: .6; font-weight: 700; }
+.tab--day.is-active .tab__dow { opacity: .75; }
 
 /* «Сегодня» помечено точкой — легко найти глазами в длинной ленте */
 .tab--today { position: relative; }
 .tab--today::after {
-  content: ""; position: absolute; left: 50%; bottom: 2px; translate: -50% 0;
+  content: ""; position: absolute; left: 50%; bottom: 3px; translate: -50% 0;
   width: 4px; height: 4px; border-radius: 50%; background: var(--yellow);
   transition: opacity .16s;
 }
 .tab--today.is-active::after { opacity: 0; }
 
-/* лента прокручивается пальцем, полоса прокрутки не нужна */
-.tabs-bar__in { scroll-behavior: smooth; }
-.tabs-bar__in::-webkit-scrollbar { display: none; }
+/* ------------------------------------------------------------------ реклама
+   Одно место на весь сайт: между лентой дат и списком матчей. Так же стоит
+   у Sofascore и Flashscore — реклама попадает в первый экран, но не разрывает
+   список матчей и уезжает вверх при прокрутке.
+
+   Размеры (их же отдаёт /api/ads, подробности — static/ads/README.md):
+     компьютер — 1200×150 CSS-пикселей, пропорция 8:1   (файл 2400×300 @2x);
+     телефон   — 640×200 CSS-пикселей, пропорция 16:5   (файл 1280×400 @2x).
+
+   Высота места задана через aspect-ratio, поэтому лента матчей не прыгает,
+   пока грузится ролик, и не дёргается при смене креатива. */
+.adzone {
+  max-width: 1600px; margin: 0 auto; padding: 14px var(--gutter) 0;
+  width: 100%;
+}
+.adzone__link { display: block; }
+.adzone__in {
+  position: relative;
+  width: 100%; max-width: 1200px; margin: 0 auto;
+  aspect-ratio: 8 / 1;
+  border-radius: var(--r-lg); overflow: hidden;
+  background: var(--surface-2); border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.adzone__media {
+  width: 100%; height: 100%; object-fit: cover; object-position: center;
+  display: block; border: 0;
+}
+/* Подпись «Реклама»: по закону она нужна, но кричать ей незачем */
+.adzone__tag {
+  position: absolute; top: 7px; left: 8px; z-index: 2;
+  padding: 2px 8px; border-radius: 999px;
+  background: rgba(6,10,18,.55); backdrop-filter: blur(6px);
+  color: rgba(255,255,255,.82);
+  font-size: 9.5px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase;
+  pointer-events: none;
+}
+.adzone--live .adzone__in { transition: transform .22s ease, box-shadow .22s ease; }
+.adzone--live .adzone__link:hover .adzone__in {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 34px rgba(45,107,255,.22), var(--shadow);
+}
+
+/* Рекламы нет — остаётся маленькая ненавязчивая плашка, а не пустая дыра
+   в полтора десятка сантиметров. */
+.adzone--empty .adzone__in {
+  aspect-ratio: auto; height: 64px;
+  display: grid; place-items: center;
+  background:
+    repeating-linear-gradient(135deg, transparent 0 9px, color-mix(in srgb, var(--text) 3%, transparent) 9px 18px),
+    var(--surface);
+  border-style: dashed; box-shadow: none;
+}
+.adzone__stub {
+  display: inline-flex; align-items: center; gap: 9px;
+  color: var(--text-3); font-size: 11px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase;
+}
+.adzone__stub b {
+  display: grid; place-items: center; min-width: 30px; height: 20px;
+  padding: 0 7px; border-radius: 5px;
+  background: var(--surface-3); color: var(--text-2);
+  font-size: 10.5px; letter-spacing: .6px;
+}
 
 /* ------------------------------------------------------------------ раскладка */
 .layout {
-  max-width: 1600px; margin: 0 auto; padding: 16px;
+  max-width: 1600px; margin: 0 auto; padding: 14px var(--gutter) 24px;
   display: grid; grid-template-columns: var(--col-left) minmax(0,1fr) var(--col-right);
   gap: 16px; align-items: start;
+  width: 100%;
 }
-.col--left, .col--right { position: sticky; top: calc(var(--hdr-h) + var(--tabs-h) + 16px); }
+.col { min-width: 0; }
+.col--left, .col--right { position: sticky; top: calc(var(--hdr-h) + var(--tabs-h) + 14px); }
 .col--left > *, .col--right > * { margin-bottom: 12px; }
+.col--left > *:last-child, .col--right > *:last-child { margin-bottom: 0; }
 
 /* ------------------------------------------------------------------ карточки */
 .card {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--r-lg); overflow: hidden;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow), var(--hairline);
 }
 .card__head {
   display: flex; align-items: center; gap: 9px;
-  padding: 12px 14px; border-bottom: 1px solid var(--border-soft);
+  padding: 13px 15px; border-bottom: 1px solid var(--border-soft);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 70%, transparent), transparent);
 }
 .card__title {
-  font-size: 11.5px; font-weight: 800; letter-spacing: 1px;
+  font-size: 11px; font-weight: 800; letter-spacing: 1.1px;
   text-transform: uppercase; color: var(--text-2);
+  display: inline-flex; align-items: center; gap: 8px;
 }
+/* Жёлтая засечка перед заголовком секции — та же деталь, что у блока лиги */
 .card__title--accent { color: var(--yellow); }
-.card__body { padding: 6px 0; }
-.card__body--pad { padding: 14px; }
+/* та же причина, что и у надписи в шапке: чистый жёлтый на белом не читается */
+[data-theme="light"] .card__title--accent { color: var(--yellow-deep); }
+.card__title--accent::before {
+  content: ""; width: 3px; height: 13px; border-radius: 2px;
+  background: linear-gradient(180deg, var(--yellow), var(--yellow-deep));
+}
+.card__body { padding: 5px 0; }
+.card__body--pad { padding: 15px; }
 .card__foot {
-  padding: 10px 14px; border-top: 1px solid var(--border-soft);
+  padding: 11px 15px; border-top: 1px solid var(--border-soft);
   font-size: 12px; color: var(--text-3);
 }
 
 /* ------------------------------------------------------------------ левая колонка: лиги */
-.leagues { max-height: calc(100vh - var(--hdr-h) - var(--tabs-h) - 48px); overflow-y: auto; }
+.leagues {
+  max-height: calc(100vh - var(--hdr-h) - var(--tabs-h) - 58px);
+  overflow-y: auto; overscroll-behavior-y: contain;
+}
 .league-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 8px 12px; cursor: pointer; position: relative;
+  display: flex; align-items: center; gap: 11px;
+  padding: 9px 13px; cursor: pointer; position: relative;
   transition: background .14s;
 }
 .league-item::before {
   content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px;
-  border-radius: 0 3px 3px 0; background: var(--yellow);
+  border-radius: 0 3px 3px 0; background: linear-gradient(180deg, var(--yellow), var(--yellow-deep));
   transform: scaleY(0); transform-origin: center; transition: transform .18s;
 }
 .league-item:hover { background: var(--hover); }
 .league-item:hover::before, .league-item.is-active::before { transform: scaleY(1); }
 .league-item.is-active { background: var(--surface-2); }
+.league-item.is-active .league-item__name { color: var(--yellow); }
 .league-item__flag {
-  width: 24px; height: 18px; border-radius: 4px; object-fit: contain; flex-shrink: 0;
+  width: 25px; height: 18px; border-radius: 4px; object-fit: contain; flex-shrink: 0;
 }
 .league-item__logo { width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; }
 .league-item__text { min-width: 0; flex: 1; }
 .league-item__name {
-  font-size: 13px; font-weight: 600; white-space: nowrap;
+  font-size: 13px; font-weight: 650; white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis;
+  transition: color .16s;
 }
-.league-item__country { font-size: 11px; color: var(--text-3); }
+.league-item__country { font-size: 10.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .league-item__badge {
-  font-family: var(--ff-num); font-size: 11px; font-weight: 700;
+  font-family: var(--ff-num); font-size: 11px; font-weight: 800;
   color: var(--text-3); background: var(--surface-3);
-  border-radius: 999px; padding: 2px 7px; flex-shrink: 0;
+  border-radius: 999px; padding: 2px 8px; flex-shrink: 0;
 }
-.league-item__badge--live { background: var(--red); color: #fff; }
+.league-item__badge--live {
+  background: var(--red); color: #fff;
+  box-shadow: 0 2px 9px rgba(255,66,87,.3);
+}
 .league-item__star {
   flex-shrink: 0; color: var(--text-3); opacity: 0; transition: opacity .15s, color .15s, transform .15s;
 }
@@ -353,16 +565,16 @@ img { display: block; }
 /* ------------------------------------------------------------------ группа лиги в ленте */
 .league-block { margin-bottom: 12px; }
 .league-block__head {
-  display: flex; align-items: center; gap: 11px;
-  padding: 12px 14px 12px 16px;
-  background: linear-gradient(90deg, var(--surface-2), var(--surface));
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 15px 12px 17px;
+  background: linear-gradient(90deg, var(--surface-2), var(--surface) 62%);
   border-bottom: 1px solid var(--border-soft);
   /* Здесь был position:sticky — заголовок отрывался от блока и накрывал
      строки матчей при прокрутке. Название лиги стоит над своими играми. */
   position: relative;
   transition: background .18s ease;
 }
-.league-block__head:hover { background: linear-gradient(90deg, var(--hover), var(--surface)); }
+.league-block__head:hover { background: linear-gradient(90deg, var(--hover), var(--surface) 62%); }
 /* жёлтая полоска — визуальный якорь начала блока лиги */
 .league-block__head::before {
   content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
@@ -372,35 +584,41 @@ img { display: block; }
 /* contain, не cover: логотипы турниров широкие (ЧМ — 337x150),
    cover вырезал из них нечитаемый центральный квадрат */
 .league-block__flag {
-  width: 26px; height: 20px; border-radius: 3px; flex-shrink: 0;
+  width: 27px; height: 20px; border-radius: 3px; flex-shrink: 0;
   object-fit: contain; object-position: center;
 }
 /* счётчик матчей в лиге */
 .league-block__count {
-  margin-left: auto; font-family: var(--ff-num); font-size: 11px; font-weight: 700;
+  margin-left: auto; flex-shrink: 0;
+  font-family: var(--ff-num); font-size: 11px; font-weight: 800;
   color: var(--text-3); background: var(--surface-3);
-  border-radius: 999px; padding: 2px 8px;
+  border-radius: 999px; padding: 3px 9px;
 }
-.league-block__count--live { background: var(--red); color: #fff; }
-.league-block__text { min-width: 0; }
-.league-block__country { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .6px; }
+.league-block__count--live {
+  background: var(--red); color: #fff;
+  box-shadow: 0 2px 10px rgba(255,66,87,.32);
+}
+.league-block__text { min-width: 0; flex: 1; }
+.league-block__country {
+  font-size: 10.5px; color: var(--text-3); text-transform: uppercase;
+  letter-spacing: .8px; font-weight: 700;
+}
 .league-block__name {
-  font-size: 13.5px; font-weight: 700;
+  font-size: 14px; font-weight: 750; letter-spacing: .1px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   transition: color .16s ease;
 }
-.league-block__name:hover { color: var(--yellow); }
-.league-block__arrow { color: var(--text-3); font-size: 14px; transition: transform .18s ease, color .18s ease; }
+.league-block__head:hover .league-block__name { color: var(--yellow); }
+.league-block__arrow { color: var(--text-3); font-size: 16px; flex-shrink: 0; transition: transform .18s ease, color .18s ease; }
 
 /* ------------------------------------------------------------------ строка матча */
 .match {
   display: grid;
-  grid-template-columns: 52px 1fr auto 26px;
+  grid-template-columns: 54px minmax(0,1fr) auto 28px;
   align-items: center; gap: 10px;
-  padding: 9px 12px 9px 10px;
+  padding: 9px 12px 9px 11px;
   border-bottom: 1px solid var(--border-soft);
   cursor: pointer; position: relative;
-  transition: background .13s;
 }
 .match:last-child { border-bottom: 0; }
 .match:hover { background: var(--hover); }
@@ -409,59 +627,65 @@ img { display: block; }
   background: var(--red); opacity: 0; transition: opacity .2s;
 }
 .match.is-live::before { opacity: 1; }
-.match.is-live { background: color-mix(in srgb, var(--red) 5%, transparent); }
-.match.is-live:hover { background: color-mix(in srgb, var(--red) 9%, transparent); }
+.match.is-live { background: color-mix(in srgb, var(--red) 6%, transparent); }
+.match.is-live:hover { background: color-mix(in srgb, var(--red) 10%, transparent); }
 
 .match__time {
-  font-family: var(--ff-num); font-size: 12px; font-weight: 600;
+  font-family: var(--ff-num); font-size: 12.5px; font-weight: 650;
   color: var(--text-3); text-align: center; line-height: 1.25;
   min-width: 0; overflow-wrap: anywhere;
 }
 .match__time--live { color: var(--red); font-weight: 800; }
 .match__time--live::after {
   content: "'"; }
-/* Статус словом («Перерыв», «Танаффус») вместо минуты. Колонка всего 44–52 px,
+/* Статус словом («Перерыв», «Танаффус») вместо минуты. Колонка всего 44–54 px,
    поэтому кегль мельче, слово не переносится, а штрих минуты к нему не клеится.
    Правило стоит ПОСЛЕ --live: специфичность та же, побеждает порядок. */
 .match__time--word {
-  font-family: var(--ff); font-size: 9.5px; font-weight: 700;
+  font-family: var(--ff); font-size: 9.5px; font-weight: 800;
   line-height: 1.2; letter-spacing: 0; white-space: nowrap;
 }
 .match__time--live.match__time--word::after { content: none; }
 /* Пульсирующая точка означает идущий отсчёт минут; в перерыве отсчёта нет,
    а в колонке «Популярное» (44 px) она вдобавок выталкивает слово на логотип. */
 .match__time--word .match__pulse { display: none; }
-.match__status-txt { font-size: 10px; color: var(--text-3); display: block; font-weight: 600; }
+.match__status-txt { font-size: 10px; color: var(--text-3); display: block; font-weight: 700; }
 .match__pulse {
   display: inline-block; width: 6px; height: 6px; border-radius: 50%;
   background: var(--red); margin-right: 4px; vertical-align: middle;
   animation: pulse 1.6s ease-in-out infinite;
 }
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255,77,94,.6); opacity: 1; }
-  50% { box-shadow: 0 0 0 5px rgba(255,77,94,0); opacity: .55; }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,66,87,.6); opacity: 1; }
+  50% { box-shadow: 0 0 0 5px rgba(255,66,87,0); opacity: .55; }
 }
 
-.match__teams { display: grid; gap: 4px; min-width: 0; }
-.match__team { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.match__team img { width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; }
-.match__team span {
-  font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+.match__teams { display: grid; gap: 5px; min-width: 0; }
+.match__team { display: flex; align-items: center; gap: 9px; min-width: 0; }
+/* Эмблемы приходят разного размера и с разным фоном — общая подложка
+   выравнивает их по одной сетке и не даёт тёмному гербу пропасть в тёмной теме. */
+.match__team img {
+  width: 21px; height: 21px; object-fit: contain; flex-shrink: 0;
+  border-radius: 4px;
 }
-.match__team--loser span { color: var(--text-3); }
-.match__team--winner span { font-weight: 700; }
+.match__team span {
+  font-size: 13.5px; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.match__team--loser span { color: var(--text-3); font-weight: 450; }
+.match__team--winner span { font-weight: 750; color: var(--text); }
 
 .match__score {
-  display: grid; gap: 4px; text-align: right;
-  font-family: var(--ff-num); font-size: 14.5px; font-weight: 800;
-  min-width: 22px;
+  display: grid; gap: 5px; text-align: right;
+  font-family: var(--ff-num); font-size: 15px; font-weight: 800;
+  min-width: 22px; flex-shrink: 0;
 }
-.match__score div { line-height: 20px; transition: color .2s; }
+.match__score div { line-height: 21px; transition: color .2s; }
 .match__score--live { color: var(--red); }
 .match__score--pending { color: var(--text-3); font-weight: 500; }
 .score-flash { animation: flash .9s ease; }
 @keyframes flash {
-  0% { background: var(--yellow); color: #0A0E18; border-radius: 4px; }
+  0% { background: var(--yellow); color: #0A0E18; border-radius: 5px; }
   100% { background: transparent; }
 }
 
@@ -469,20 +693,31 @@ img { display: block; }
   color: var(--text-3); opacity: 0; transition: opacity .15s, color .15s, transform .15s;
   display: grid; place-items: center;
 }
-.match:hover .match__fav { opacity: .65; }
+.match:hover .match__fav { opacity: .6; }
 .match__fav.is-on { opacity: 1; color: var(--yellow); }
-.match__fav:hover { transform: scale(1.18); color: var(--yellow); }
+.match__fav:hover { transform: scale(1.2); color: var(--yellow); }
+/* На тач-экранах :hover не срабатывает — звёздочка была бы невидимой кнопкой */
+@media (hover: none) {
+  .match__fav { opacity: .45; }
+  .league-item__star { opacity: .5; }
+}
 
 /* компактная строка для правой колонки */
-.match--mini { grid-template-columns: 44px 1fr auto; padding: 8px 12px; }
+.match--mini { grid-template-columns: 46px minmax(0,1fr) auto; padding: 8px 13px; }
 .match--mini .match__team span { font-size: 12.5px; }
+.match--mini .match__team img { width: 18px; height: 18px; }
 .match--mini .match__fav { display: none; }
 
 /* ------------------------------------------------------------------ пустые состояния и скелетоны */
-.empty { padding: 44px 20px; text-align: center; color: var(--text-3); }
-.empty__icon { font-size: 34px; margin-bottom: 10px; opacity: .55; }
-.empty__title { font-size: 15px; font-weight: 600; color: var(--text-2); margin-bottom: 5px; }
-.empty__hint { font-size: 12.5px; max-width: 320px; margin: 0 auto; line-height: 1.5; }
+.empty { padding: 48px 20px; text-align: center; color: var(--text-3); }
+.empty__icon {
+  font-size: 30px; margin-bottom: 12px; opacity: .8;
+  display: grid; place-items: center; width: 62px; height: 62px;
+  margin-inline: auto; border-radius: 50%;
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+.empty__title { font-size: 15px; font-weight: 700; color: var(--text-2); margin-bottom: 6px; }
+.empty__hint { font-size: 12.5px; max-width: 330px; margin: 0 auto; line-height: 1.55; }
 
 .skeleton {
   background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
@@ -490,7 +725,7 @@ img { display: block; }
   border-radius: var(--r-sm);
 }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-.sk-row { display: grid; grid-template-columns: 52px 1fr auto; gap: 10px; align-items: center; padding: 11px 12px; }
+.sk-row { display: grid; grid-template-columns: 54px minmax(0,1fr) auto; gap: 10px; align-items: center; padding: 12px; }
 .sk-line { height: 11px; }
 
 /* ------------------------------------------------------------------ утилиты */
@@ -622,9 +857,16 @@ img { display: block; }
 
 /* ------------------------------------------------------------------ страница матча */
 .mhero {
-  border-radius: var(--r-lg); overflow: hidden;
-  background: linear-gradient(160deg, var(--surface-2), var(--surface) 70%);
-  border: 1px solid var(--border); box-shadow: var(--shadow);
+  position: relative; border-radius: var(--r-lg); overflow: hidden;
+  background: linear-gradient(160deg, var(--surface-2), var(--surface) 68%);
+  border: 1px solid var(--border); box-shadow: var(--shadow), var(--hairline);
+}
+/* Мягкое пятно сверху — карточка матча выглядит подсвеченной прожектором,
+   а не просто плашкой другого оттенка. */
+.mhero::before {
+  content: ""; position: absolute; inset: -40% 20% auto 20%; height: 190px;
+  background: radial-gradient(60% 100% at 50% 100%, rgba(45,107,255,.22), transparent 70%);
+  pointer-events: none;
 }
 .mhero__top {
   display: flex; align-items: center; gap: 10px; padding: 11px 16px;
@@ -640,8 +882,8 @@ img { display: block; }
 .mteam__name { font-size: 15px; font-weight: 700; line-height: 1.25; }
 .mscore { display: grid; justify-items: center; gap: 7px; }
 .mscore__val {
-  font-family: var(--ff-num); font-size: 42px; font-weight: 900; line-height: 1;
-  letter-spacing: -1px; white-space: nowrap;
+  font-family: var(--ff-num); font-size: 44px; font-weight: 900; line-height: 1;
+  letter-spacing: -1.5px; white-space: nowrap;
 }
 .mscore__val--live { color: var(--red); }
 .mscore__status { font-size: 12px; font-weight: 700; color: var(--text-2); }
@@ -660,7 +902,10 @@ img { display: block; }
   color: var(--text-2); white-space: nowrap; transition: background .15s, color .15s;
 }
 .subtab:hover { background: var(--surface-2); color: var(--text); }
-.subtab.is-active { background: var(--blue); color: #fff; }
+.subtab.is-active {
+  background: linear-gradient(180deg, var(--blue-soft), var(--blue));
+  color: #fff; box-shadow: 0 3px 12px rgba(45,107,255,.3);
+}
 
 /* лента событий */
 .tl { position: relative; padding: 14px 0; }
@@ -832,10 +1077,12 @@ img { display: block; }
 table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 520px; }
 .tbl thead th {
   position: sticky; top: 0; background: var(--surface-2); z-index: 1;
-  padding: 9px 6px; font-size: 10.5px; font-weight: 800; letter-spacing: .6px;
+  padding: 10px 6px; font-size: 10px; font-weight: 800; letter-spacing: .8px;
   text-transform: uppercase; color: var(--text-3); text-align: center;
   border-bottom: 1px solid var(--border);
 }
+/* Чётные строки чуть темнее — глаз не сбивается со строки на длинной таблице */
+.tbl tbody tr:nth-child(even) { background: color-mix(in srgb, var(--surface-2) 45%, transparent); }
 .tbl thead th.l { text-align: left; }
 .tbl tbody td { padding: 8px 6px; text-align: center; border-bottom: 1px solid var(--border-soft); }
 .tbl tbody tr { transition: background .13s; cursor: pointer; }
@@ -920,56 +1167,97 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
 /* ------------------------------------------------------------------ нижняя навигация (мобилка) */
 .mobnav {
   display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
-  background: color-mix(in srgb, var(--bg) 94%, transparent);
-  backdrop-filter: blur(14px); border-top: 1px solid var(--border);
-  padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  background: var(--glass);
+  backdrop-filter: saturate(180%) blur(18px);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+  border-top: 1px solid var(--border);
+  padding: 7px 6px calc(7px + env(safe-area-inset-bottom));
   grid-template-columns: repeat(4, 1fr);
 }
 .mobnav button {
-  display: grid; justify-items: center; gap: 3px; padding: 6px 0;
-  font-size: 10.5px; font-weight: 600; color: var(--text-3); transition: color .15s;
+  position: relative;
+  display: grid; justify-items: center; gap: 3px; padding: 7px 0 6px;
+  border-radius: 12px;
+  font-size: 10.5px; font-weight: 650; color: var(--text-3);
+  transition: color .16s, background .16s;
 }
-.mobnav button.is-active { color: var(--yellow); }
+.mobnav button svg { transition: transform .22s cubic-bezier(.34,1.56,.64,1); }
+.mobnav button.is-active { color: var(--yellow); background: color-mix(in srgb, var(--yellow) 10%, transparent); }
+.mobnav button.is-active svg { transform: translateY(-1px) scale(1.06); }
+/* Тонкая жёлтая риска внутри пилюли: подсказывает раздел, но не отрывается
+   от кнопки, как это было с риской, вынесенной на границу панели. */
+.mobnav button.is-active::before {
+  content: ""; position: absolute; top: 0; left: 50%; translate: -50% 0;
+  width: 20px; height: 2.5px; border-radius: 0 0 3px 3px;
+  background: linear-gradient(90deg, var(--yellow), var(--yellow-deep));
+}
+.mobnav button:active { transform: scale(.94); }
 
 /* ------------------------------------------------------------------ адаптив */
 @media (max-width: 1280px) {
-  :root { --col-right: 280px; }
+  :root { --col-right: 300px; --col-left: 236px; }
 }
 @media (max-width: 1100px) {
   .layout { grid-template-columns: var(--col-left) minmax(0,1fr); }
   .col--right { display: none; }
 }
 @media (max-width: 860px) {
-  :root { --hdr-h: 56px; }
-  .layout { grid-template-columns: minmax(0,1fr); padding: 10px; gap: 10px; padding-bottom: 78px; }
+  :root { --hdr-h: 58px; --tabs-h: 48px; --gutter: 11px; }
+  .layout { grid-template-columns: minmax(0,1fr); padding: 11px var(--gutter) 84px; gap: 11px; }
   .col--left { display: none; }
   .col--left.is-open {
-    display: block; position: fixed; inset: var(--hdr-h) 0 62px 0; z-index: 80;
+    display: block; position: fixed; inset: var(--hdr-h) 0 66px 0; z-index: 80;
     background: var(--bg); padding: 12px; overflow-y: auto;
   }
   .col--left.is-open .leagues { max-height: none; }
   .mobnav { display: grid; }
-  .brand__name { font-size: 22px; }
-  .brand__logo { width: 34px; height: 34px; }
-  .hdr__in { grid-template-columns: auto 1fr auto; gap: 10px; padding: 0 12px; }
-  .hdr__in--back { grid-template-columns: auto auto 1fr auto; gap: 8px; }
-  .tab--day { padding: 5px 10px; font-size: 12px; }
-  .tabs-bar__in { padding: 0 10px; gap: 5px; }
-  .tab { padding: 6px 12px; font-size: 13px; }
-  .btn-back { width: 32px; height: 32px; }
-  .backhome { padding: 4px 12px 84px; }   /* выше мобильной навигации */
-  .search { max-width: none; min-width: 0; }
-  .search input { font-size: 16px; }  /* iOS не зумит поле при фокусе */
-  .brand { min-width: 0; }
-  .hdr__in { min-width: 0; }
-  .match { grid-template-columns: 42px minmax(0,1fr) auto 22px; padding: 8px 6px; gap: 7px; }
-  .match__team span {
-    font-size: 13px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+
+  /* Телефонный баннер: пропорция 16:5 вместо 8:1, иначе на 390 px ширины
+     полоса вышла бы высотой 48 px и реклама в ней не читалась бы. */
+  .adzone { padding: 11px var(--gutter) 0; }
+  /* max-width снят: на планшете 640 px оставляли по бокам пустые поля, а
+     исходник 1280×400 спокойно растягивается до ширины колонки. */
+  .adzone__in { max-width: none; aspect-ratio: 16 / 5; border-radius: var(--r); }
+  .adzone--empty .adzone__in { aspect-ratio: auto; height: 54px; }
+
+  .brand__name { font-size: 21px; letter-spacing: .4px; }
+  .brand__logo { width: 36px; height: 36px; }
+  .brand { gap: 9px; }
+  .hdr__in { grid-template-columns: minmax(0,1fr) auto; gap: 10px; }
+  .hdr__in--back { grid-template-columns: auto minmax(0,1fr) auto; gap: 8px; }
+  .tab--day { padding: 5px 11px; font-size: 12.5px; }
+  .tabs-bar__in { gap: 5px; }
+  .tab { padding: 7px 13px; font-size: 13px; }
+  .btn-back { width: 34px; height: 34px; }
+  .backhome { padding: 4px 12px 88px; }   /* выше мобильной навигации */
+  /* Поиск на телефоне.
+     Раньше поле стояло между логотипом и кнопками и на 390 px ужималось до
+     одной буквы — искать в нём было нельзя, а логотип оно всё равно сдавливало.
+     Теперь поиск живёт за кнопкой-лупой и раскрывается поверх всей шапки. */
+  .icon-btn--search { display: grid; }
+  .search {
+    position: absolute; inset: 0; z-index: 3;
+    max-width: none; justify-self: stretch;
+    display: grid; align-content: center;
+    padding: 0 var(--gutter);
+    background: var(--glass);
+    backdrop-filter: saturate(180%) blur(18px);
+    -webkit-backdrop-filter: saturate(180%) blur(18px);
+    opacity: 0; pointer-events: none; transform: translateY(-4px);
+    transition: opacity .18s ease, transform .18s ease;
   }
+  .hdr.is-searching .search { opacity: 1; pointer-events: auto; transform: none; }
+  .search__close { display: grid; place-items: center; }
+  .search input { font-size: 16px; }  /* iOS не зумит поле при фокусе */
+  .search__field { height: 40px; padding: 0 14px; }
+  .search__results { left: var(--gutter); right: var(--gutter); }
+  .match { grid-template-columns: 44px minmax(0,1fr) auto 24px; padding: 9px 7px; gap: 8px; }
+  .match__team span { font-size: 13px; }
+  .match__team img { width: 19px; height: 19px; }
   .card { border-radius: var(--r); }
   .league-block { margin-bottom: 9px; }
-  .league-block__head { padding: 10px 12px 10px 14px; }
+  .league-block__head { padding: 11px 12px 11px 14px; gap: 10px; }
+  .league-block__name { font-size: 13.5px; }
   .mhero__main { padding: 18px 10px 16px; gap: 8px; }
   .mteam img { width: 46px; height: 46px; }
   .mteam__name { font-size: 13px; }
@@ -979,7 +1267,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
   .pl { width: 48px; }
   .pl__num { width: 26px; height: 26px; font-size: 11px; }
   .pl__name { max-width: 48px; font-size: 9.5px; }
-  .tl__ev { grid-template-columns: 1fr 50px 1fr; padding: 6px 8px; }
+  .tl__ev { grid-template-columns: minmax(0,1fr) 50px minmax(0,1fr); padding: 6px 8px; }
   .tl__player { font-size: 12.5px; }
   .drawer { width: min(340px, calc(100vw - 12px)); max-width: calc(100vw - 12px); }
 
@@ -996,20 +1284,45 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
   .subtabs { padding: 0 0 10px; }
   .league-sec { margin-bottom: 9px; }
 }
+/* На телефоне «LIVE» и «Все» съедали половину строки, и от ленты дат
+   оставалось одно «Сегодня». Ужимаем неподвижную часть — видно три-четыре дня. */
+@media (max-width: 620px) {
+  .tabs-fixed { gap: 2px; }
+  .tabs-fixed .tab { padding: 7px 10px; font-size: 12.5px; }
+  .tab--live { gap: 5px; }
+  .tab--live .tab__count { margin-left: 0; min-width: 17px; height: 17px; padding: 0 4px; }
+  .tabs-sep { margin: 0 3px; height: 20px; }
+  .tab--day { padding: 5px 9px; }
+}
+
 @media (max-width: 420px) {
-  .hdr__in { padding: 0 10px; gap: 8px; }
-  .brand { gap: 8px; }
-  .brand__name { font-size: 18px; letter-spacing: .7px; }
-  .search__field { padding: 0 10px; }
-  .icon-btn { width: 34px; height: 34px; }
+  :root { --gutter: 9px; }
+  .brand { gap: 7px; }
+  .brand__name { font-size: 17px; letter-spacing: .2px; }
+  .brand__logo { width: 32px; height: 32px; }
+  .search__field { padding: 0 11px; gap: 8px; }
+  .icon-btn { width: 34px; height: 34px; border-radius: 10px; }
+  .hdr__actions { gap: 6px; }
   .drawer {
     width: min(320px, calc(100vw - 10px));
     max-width: calc(100vw - 10px);
   }
-  .match__time { font-size: 11px; }
+  .match__time { font-size: 11.5px; }
   /* Иначе строка выше перебила бы кегль словесного статуса: специфичность
-     та же, а медиазапрос стоит в файле ниже. Колонка тут всего 42 px. */
+     та же, а медиазапрос стоит в файле ниже. Колонка тут всего 44 px. */
   .match__time--word { font-size: 8.5px; }
+}
+
+/* Совсем узкие экраны (320 px, старые Android): шапка перестаёт быть
+   трёхколоночной — поиск уезжает во вторую строку, иначе он сдавливает
+   логотип и появляется горизонтальная прокрутка. */
+/* Совсем узкие экраны (320 px, старые Android): на «Войти» места уже нет,
+   вход остаётся в шторке настроек. Шапка при этом не переносится на две
+   строки и не начинает ездить вбок. */
+@media (max-width: 359px) {
+  .auth-btn { display: none; }
+  .hdr__actions { gap: 5px; }
+  .icon-btn { width: 32px; height: 32px; }
 }
 
 /* уважаем системную настройку «меньше движения» */
@@ -1035,7 +1348,9 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 
   overflow: hidden; text-overflow: ellipsis;
   transition: background .18s ease, color .18s ease, transform .18s ease;
 }
+.auth-btn { height: 36px; border-radius: 999px; box-shadow: var(--hairline); }
 .auth-btn:hover { background: var(--hover); color: var(--text); transform: translateY(-1px); }
+.auth-btn:active { transform: translateY(0) scale(.96); }
 /* Вошедший пользователь: имя подсвечено фирменным жёлтым */
 .auth-btn--user { color: var(--yellow); border-color: var(--yellow-deep); }
 

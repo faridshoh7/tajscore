@@ -44,7 +44,7 @@
   function apply() {
     document.documentElement.dataset.theme = state.theme;
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = state.theme === "dark" ? "#070B14" : "#EEF1F7";
+    if (meta) meta.content = state.theme === "dark" ? "#060A12" : "#EFF2F8";
     if (window.applyI18n) applyI18n();
   }
 

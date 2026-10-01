@@ -1,0 +1,25 @@
+{
+  "_readme": "Инструкция и размеры — в static/ads/README.md. Файл читается на лету: сохранили — реклама сменилась без перезапуска сервера.",
+  "enabled": true,
+  "items": [
+    {
+      "id": "demo",
+      "enabled": false,
+      "title": "Название рекламодателя",
+      "link": "https://example.com",
+      "weight": 1,
+      "start": null,
+      "end": null,
+      "desktop": {
+        "type": "video",
+        "src": "/static/ads/demo-desktop.mp4",
+        "poster": "/static/ads/demo-desktop.jpg"
+      },
+      "mobile": {
+        "type": "video",
+        "src": "/static/ads/demo-mobile.mp4",
+        "poster": "/static/ads/demo-mobile.jpg"
+      }
+    }
+  ]
+}
