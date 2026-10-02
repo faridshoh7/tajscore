@@ -3,7 +3,13 @@ import json
 import time
 
 from app import db
-from app.config import LEAGUE_BY_ID
+from app.config import LEAGUE_BY_ID, NATIONAL_TEAM
+from app.sync.fdorg import COMPETITIONS as _FD_COMPETITIONS
+
+# Лиги, которые ведёт football-data.org. Ответы API-Football по дате и ?live=all
+# приносят и их матчи тоже — если сохранять, один матч оказывается в базе дважды
+# под разными id и с разными командами. Источник у каждой лиги ровно один.
+_FD_LEAGUES = set(_FD_COMPETITIONS)
 
 
 def _team(conn, t: dict) -> int | None:
@@ -22,10 +28,22 @@ def save_fixtures(items: list[dict], only_known_leagues: bool = True) -> int:
     """Сохраняет список матчей. Возвращает число записанных."""
     now = int(time.time())
     n = 0
+    national: list[dict] = []
+    nt_team = NATIONAL_TEAM["team_id"]
     with db.write() as conn:
         for it in items:
             fx, lg = it.get("fixture") or {}, it.get("league") or {}
             if not fx.get("id"):
+                continue
+            # Матчи сборной Таджикистана идут в разных турнирах (отбор, товарищеские,
+            # CAFA) — собираем их на её странице, откуда бы они ни пришли. Так
+            # свежие матчи появляются даже на бесплатном тарифе: их приносит
+            # обычный ежедневный запрос по дате.
+            tms = it.get("teams") or {}
+            if nt_team in ((tms.get("home") or {}).get("id"), (tms.get("away") or {}).get("id")):
+                national.append(it)
+                continue
+            if lg.get("id") in _FD_LEAGUES:
                 continue
             if only_known_leagues and lg.get("id") not in LEAGUE_BY_ID:
                 continue
@@ -66,6 +84,9 @@ def save_fixtures(items: list[dict], only_known_leagues: bool = True) -> int:
                  et.get("home"), et.get("away"), pen.get("home"), pen.get("away"), winner, now),
             )
             n += 1
+    if national:
+        from app.sync import national as nt   # national сам импортирует store
+        n += nt.save_nt_fixtures(national)
     return n
 
 

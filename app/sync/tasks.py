@@ -16,6 +16,16 @@ OWN_LEAGUE_IDS = [lid for lid in LEAGUE_IDS if lid not in FD_COMPETITIONS]
 
 log = logging.getLogger("tajscore.sync")
 
+# id матчей из football-data.org и ручного импорта начинаются с 900 000 000
+# (см. fdorg.FIXTURE_OFFSET). У API-Football таких матчей нет: запрос по ним
+# вернёт пустоту, но всё равно спишется из дневного лимита.
+FOREIGN_ID_FROM = 900_000_000
+
+
+def is_api_football_fixture(fixture_id: int | None) -> bool:
+    return bool(fixture_id) and 0 < int(fixture_id) < FOREIGN_ID_FROM
+
+
 # Статусы, при которых матч считается идущим
 LIVE_STATUSES = ("1H", "HT", "2H", "ET", "BT", "P", "SUSP", "INT", "LIVE")
 FINISHED_STATUSES = ("FT", "AET", "PEN", "PST", "CANC", "ABD", "AWD", "WO")
@@ -90,6 +100,23 @@ def _matches_in_window(league_ids) -> int:
          *FINISHED_STATUSES),
     )
     return row["n"] if row else 0
+
+
+def live_window_end(league_ids) -> int:
+    """Когда закончится текущее живое окно этих лиг: старт последнего матча,
+    который ещё не завершён и начнётся/идёт в пределах суток, плюс время игры.
+    0 — окна нет."""
+    if not league_ids:
+        return 0
+    now = int(time.time())
+    row = db.query_one(
+        f"""SELECT MAX(timestamp) ts FROM fixtures
+            WHERE league_id IN ({','.join('?' * len(league_ids))})
+              AND timestamp BETWEEN ? AND ?
+              AND status_short NOT IN ({','.join('?' * len(FINISHED_STATUSES))})""",
+        (*league_ids, now - SYNC["live_window_after"], now + 86400, *FINISHED_STATUSES))
+    ts = row["ts"] if row and row["ts"] else 0
+    return ts + SYNC["live_window_after"] if ts else 0
 
 
 def live_mode_active() -> bool:
@@ -201,6 +228,8 @@ async def sync_detail(fixture_id: int, force: bool = False,
     task выбирает корзину бюджета: карточки матчей Лигаи Олӣ идут из её запаса,
     чтобы добор событий по чужим лигам их не вытеснил.
     """
+    if not is_api_football_fixture(fixture_id):
+        return False
     row = db.query_one("SELECT status_short, detail_synced_at, timestamp FROM fixtures WHERE id=?",
                        (fixture_id,))
     if row and not force and not detail_is_stale(row):
@@ -210,6 +239,8 @@ async def sync_detail(fixture_id: int, force: bool = False,
         return False
     item = resp[0] if resp else None
     if not item:
+        # API такого матча не знает — помечаем, чтобы не спрашивать снова
+        store.mark_detail_synced(fixture_id)
         return False
     store.save_fixtures([item], only_known_leagues=False)
     store.save_events(fixture_id, item.get("events") or [])
@@ -286,10 +317,15 @@ def pick_match_for_details() -> int | None:
 
     Из этих событий потом считаются бомбардиры, ассистенты и карточки.
     """
+    # Лиги football-data сюда не берём: у API-Football их матчей под нашими id нет,
+    # а события топ-лиг ему всё равно не на что тратить — таблицы и бомбардиры
+    # приходят из football-data готовыми.
+    fd = list(FD_COMPETITIONS)
     row = db.query_one(
         f"""SELECT f.id FROM fixtures f JOIN leagues l ON l.id = f.league_id
-            WHERE f.detail_synced_at = 0
-              AND f.status_short IN ({','.join('?' * len(('FT', 'AET', 'PEN')))})
+            WHERE f.detail_synced_at = 0 AND f.id < ?
+              AND f.league_id NOT IN ({','.join('?' * len(fd))})
+              AND f.status_short IN ('FT', 'AET', 'PEN')
             ORDER BY l.priority ASC, f.timestamp DESC LIMIT 1""",
-        ("FT", "AET", "PEN"))
+        (FOREIGN_ID_FROM, *fd))
     return row["id"] if row else None

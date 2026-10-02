@@ -1,0 +1,25 @@
+{
+  "id": "/",
+  "name": "Tajscore — футбол онлайн",
+  "short_name": "Tajscore",
+  "description": "Лигаи Олӣ, сборная Таджикистана и топ-лиги: счёт онлайн, таблицы, уведомления о голах.",
+  "lang": "ru",
+  "dir": "ltr",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#060A12",
+  "theme_color": "#060A12",
+  "categories": ["sports", "news"],
+  "icons": [
+    {"src": "/static/img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/static/img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "/static/img/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Live", "short_name": "Live", "url": "/?tab=live", "icons": [{"src": "/static/img/icon-192.png", "sizes": "192x192"}]},
+    {"name": "Лигаи Олӣ", "short_name": "Лигаи Олӣ", "url": "/league/571", "icons": [{"src": "/static/img/icon-192.png", "sizes": "192x192"}]}
+  ]
+}

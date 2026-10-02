@@ -67,6 +67,8 @@ window.MatchPage = (function () {
             <div class="mteam__name">${esc(tname(m.away))}</div>
           </div>
         </div>
+        ${live && UI.delayMin(m) ? `<div class="mhero__delay">⏱ ${esc(t("live.delayed").replace("{n}", UI.delayMin(m)))}</div>` : ""}
+        <div class="mhero__actions" id="matchBell">${window.Notify ? Notify.bellHtml(m.id) : ""}</div>
         ${(m.venue || m.referee) ? `<div class="card__foot">
           ${m.venue ? `${esc(t("match.venue"))}: ${esc(m.venue)}${m.venue_city ? ", " + esc(m.venue_city) : ""}` : ""}
           ${m.referee ? ` · ${esc(t("match.referee"))}: ${esc(m.referee)}` : ""}
@@ -79,6 +81,7 @@ window.MatchPage = (function () {
       <div id="subContent"></div>`;
 
     renderSub();
+    if (window.Notify) Notify.loadBell(m.id);
   }
 
   function renderSub() {
@@ -115,7 +118,7 @@ window.MatchPage = (function () {
   function renderOdds() {
     const o = data.odds || {};
     const cell = val => `
-      <a class="odds__cell" href="${bookieUrl()}" target="_blank" rel="nofollow noopener sponsored">
+      <a class="odds__cell" href="${esc(bookieUrl())}" target="_blank" rel="nofollow noopener sponsored">
         ${val == null ? "—" : esc(Number(val).toFixed(2))}
         <svg class="odds__ext" width="9" height="9" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
@@ -129,7 +132,7 @@ window.MatchPage = (function () {
         <span>${esc(t("odds.home"))}</span><span>${esc(t("odds.draw"))}</span><span>${esc(t("odds.away"))}</span>
       </div>
       <div class="odds__grid">
-        <a class="odds__bookie" href="${bookieUrl()}" target="_blank" rel="nofollow noopener sponsored">
+        <a class="odds__bookie" href="${esc(bookieUrl())}" target="_blank" rel="nofollow noopener sponsored">
           <img src="/static/img/formula55-mark.png" alt="FORMULA55">
         </a>
         ${cell(o.home)}${cell(o.draw)}${cell(o.away)}

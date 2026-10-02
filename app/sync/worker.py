@@ -24,7 +24,7 @@ from app.api_client import BudgetExceeded, PlanRestricted, api
 from app.config import (BACKFILL_ENABLED, BACKFILL_PER_DAY, DETAILS_PER_DAY,
                         FD_SYNC, FIXTURE_DAYS_AHEAD, FIXTURE_DAYS_BEHIND,
                         NATIONAL_TEAM, ODDS, PHOTOS, PRIMARY_LEAGUE_ID, SYNC,
-                        USE_API_PLAYER_STATS, USE_API_STANDINGS)
+                        USE_API_PLAYER_STATS, USE_API_STANDINGS, USER_DETAILS_PER_DAY)
 from app.sync import fdorg, national, odds, tasks
 from app.sync.fd_client import fd
 
@@ -38,21 +38,59 @@ _state = {"running": False, "last_tick": 0, "live_mode": False, "last_live": 0,
 _fd_state = {"running": False, "last_tick": 0, "live_mode": False, "last_window": 0}
 
 
+_loop: asyncio.AbstractEventLoop | None = None
+
+
 def request_detail(fixture_id: int) -> bool:
-    """Вызывается из FastAPI, когда пользователь открыл страницу матча."""
+    """Вызывается из FastAPI, когда пользователь открыл страницу матча.
+
+    Запрос карточки стоит единицу из 92 дневных, поэтому фильтров несколько:
+    только матчи API-Football (у football-data своих карточек нет), только
+    уже известные нам матчи (иначе перебором id можно сжечь лимит) и не больше
+    USER_DETAILS_PER_DAY в сутки.
+    """
+    if not tasks.is_api_football_fixture(fixture_id):
+        return False
     if fixture_id in _queued or _detail_queue.full():
         return False
-    row = db.query_one("SELECT status_short, detail_synced_at, timestamp FROM fixtures WHERE id=?",
-                       (fixture_id,))
-    if row is not None and not tasks.detail_is_stale(row):
+    row = db.query_one(
+        "SELECT league_id, status_short, detail_synced_at, timestamp FROM fixtures WHERE id=?",
+        (fixture_id,))
+    if row is None or row["league_id"] in fdorg.COMPETITIONS or not tasks.detail_is_stale(row):
+        return False
+    if _spent_on("tj_detail") + _spent_on("detail_user") >= USER_DETAILS_PER_DAY:
         return False
     _queued.add(fixture_id)
+    # Эндпоинт FastAPI синхронный и работает в пуле потоков, а asyncio.Queue
+    # не потокобезопасна — кладём в очередь из её собственного цикла.
+    if _loop is not None and _loop.is_running():
+        _loop.call_soon_threadsafe(_enqueue, fixture_id)
+    else:
+        _enqueue(fixture_id)
+    return True
+
+
+def _enqueue(fixture_id: int) -> None:
     try:
         _detail_queue.put_nowait(fixture_id)
     except asyncio.QueueFull:
         _queued.discard(fixture_id)
-        return False
-    return True
+
+
+def _paced_interval(task: str, base: int, window_end: int, reserve: int = 0) -> int | None:
+    """Шаг опроса, при котором остатка корзины хватит до конца живого окна.
+
+    Матчи тура часто идут в разное время (14:00, 16:00, 18:00), и при фиксированном
+    шаге в 3 минуты 50 запросов кончались бы посреди последней игры. Здесь шаг
+    растягивается: оставшееся время окна делим на оставшиеся запросы.
+    reserve — сколько запросов не трогать (расписание на завтра тоже нужно).
+    None — тратить больше нечего.
+    """
+    left = budget.pool_remaining(budget.pool_of(task), active_pools()) - reserve
+    if left <= 0:
+        return None
+    span = max(0, window_end - int(time.time()))
+    return max(base, int(span / left))
 
 
 def active_pools() -> set[str]:
@@ -98,11 +136,18 @@ async def _step_live() -> bool:
     _state["primary_live"] = primary
 
     if primary:
-        interval, task = SYNC["primary_live_interval"], "tj_live"
+        task = "tj_live"
+        interval = _paced_interval(task, SYNC["primary_live_interval"],
+                                   tasks.live_window_end([PRIMARY_LEAGUE_ID]))
     elif active:
-        interval, task = SYNC["live_interval"], "live"
+        task = "live"
+        interval = _paced_interval(task, SYNC["live_interval"],
+                                   tasks.live_window_end(tasks.OWN_LEAGUE_IDS), reserve=3)
     else:
         interval, task = SYNC["live_idle_interval"], "live"
+    _state["live_interval"] = interval
+    if interval is None:          # корзина пуста — до завтра живой счёт не тянем
+        return False
 
     if int(time.time()) - _state["last_live"] < interval:
         return False
@@ -143,7 +188,7 @@ async def _step_details() -> bool:
         # карточка матча главной лиги оплачивается из её корзины
         row = db.query_one("SELECT league_id FROM fixtures WHERE id=?", (fid,))
         primary = bool(row and row["league_id"] == PRIMARY_LEAGUE_ID)
-        await tasks.sync_detail(fid, task="tj_detail" if primary else "detail")
+        await tasks.sync_detail(fid, task="tj_detail" if primary else "detail_user")
     finally:
         _detail_queue.task_done()
     return True
@@ -243,13 +288,17 @@ async def tick() -> None:
 
 
 async def run_forever() -> None:
+    global _loop
+    _loop = asyncio.get_running_loop()
     _state["running"] = True
     log.info("Воркер API-Football запущен. Бюджет: %s", budget.stats(active_pools()))
     try:
         while True:
             _state["last_tick"] = int(time.time())
             await tick()
-            _recompute_if_due()
+            # пересчёт таблиц — чистый CPU и SQLite; в цикле событий он
+            # подвешивал бы ответы сайта, поэтому уводим в поток
+            await asyncio.to_thread(_recompute_if_due)
             await asyncio.sleep(SYNC["tick"])
     except asyncio.CancelledError:
         log.info("Воркер API-Football остановлен")

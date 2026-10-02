@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+  <div class="empty" style="padding:48px 20px">
+    <div class="empty__icon">🥅</div>
+    <div class="empty__title" data-i18n="notfound.title">Страница не найдена</div>
+    <div class="empty__hint" data-i18n="notfound.hint">Возможно, матч удалён или ссылка набрана с ошибкой.</div>
+    <a class="btn-tg" href="/" style="margin-top:16px;display:inline-flex" data-i18n="nav.home">На главную</a>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>App.init();</script>
+{% endblock %}

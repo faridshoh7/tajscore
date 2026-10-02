@@ -11,6 +11,7 @@ import time
 from fastapi import APIRouter, Body, HTTPException, Request, Response
 
 from app import auth
+from app.admin import _parse_device_name
 from app.config import SESSION_COOKIE, SESSION_TTL, TELEGRAM_BOT_USERNAME
 
 log = logging.getLogger("tajscore.auth.api")
@@ -69,24 +70,30 @@ def start(request: Request, response: Response):
         session_id = auth.create_session()
         _set_cookie(request, response, session_id)
 
-    data = auth.create_login_token(session_id)
+    device = _parse_device_name(request.headers.get("user-agent") or "")
+    data = auth.create_login_token(session_id, device)
     return {"already": False, "sid": session_id, **data}
 
 
-@router.get("/poll")
-def poll(request: Request, response: Response, token: str, sid: str | None = None):
+@router.post("/poll")
+def poll(request: Request, response: Response,
+         token: str = Body(..., embed=True, max_length=64),
+         sid: str | None = Body(None, embed=True, max_length=64)):
     """Сайт опрашивает этот метод, пока человек ходит в бота.
 
-    Статусы: pending — ждём Start; ok — вошли; expired — 5 минут истекли;
-    unknown — токен не наш или уже израсходован.
+    Статусы: pending — ждём подтверждения; ok — вошли; expired — 5 минут
+    истекли; rejected — в боте нажали «Это не я»; unknown — токен не наш.
 
     sid — запасной идентификатор сессии (Edge и некоторые браузеры не отправляют
-    cookie обратно на duckdns-поддоменах).
+    cookie обратно на duckdns-поддоменах). Идёт в теле POST, а не в адресе:
+    адреса пишутся в журнал nginx, и идентификатор сессии оседал бы там.
     """
     session_id = _session_id(request) or sid
     row = auth.get_login_token(token)
     if not row or row["session_id"] != session_id:
         return {"status": "unknown"}
+    if row["rejected"]:
+        return {"status": "rejected"}
     if row["used"]:
         user = auth.session_user(row["session_id"])
         if user:

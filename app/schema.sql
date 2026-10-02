@@ -309,3 +309,58 @@ CREATE TABLE IF NOT EXISTS devices (
     visits       INTEGER NOT NULL DEFAULT 1
 );
 CREATE INDEX IF NOT EXISTS idx_devices_last ON devices(last_seen);
+
+-- ------------------------------------------------------------------ Уведомления
+-- Настройки уведомлений пользователя одним JSON-объектом (см. app/notify/prefs.py):
+-- каналы, типы событий, тихие часы, за сколько напоминать о матче.
+CREATE TABLE IF NOT EXISTS notify_prefs (
+    user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    prefs      TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+-- Последнее увиденное состояние матча. Уведомления рождаются из разницы:
+-- был 0:0, стал 1:0 — гол; был NS, стал 1H — начало.
+CREATE TABLE IF NOT EXISTS notify_state (
+    fixture_id INTEGER PRIMARY KEY,
+    status     TEXT,
+    home       INTEGER,
+    away       INTEGER,
+    red_home   INTEGER NOT NULL DEFAULT 0,
+    red_away   INTEGER NOT NULL DEFAULT 0,
+    lineups    INTEGER NOT NULL DEFAULT 0,   -- 1 = составы уже были
+    updated_at INTEGER NOT NULL
+);
+
+-- Что уже отправлено: защита от дублей после рестарта и повторного опроса.
+CREATE TABLE IF NOT EXISTS notify_sent (
+    user_id    INTEGER NOT NULL,
+    fixture_id INTEGER NOT NULL,
+    kind       TEXT NOT NULL,          -- "goal:2-1", "kickoff", "reminder", ...
+    sent_at    INTEGER NOT NULL,
+    PRIMARY KEY (user_id, fixture_id, kind)
+);
+CREATE INDEX IF NOT EXISTS idx_nsent_ts ON notify_sent(sent_at);
+
+-- «Не уведомлять об этом матче» — кнопка под сообщением бота или на сайте.
+CREATE TABLE IF NOT EXISTS notify_mutes (
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    fixture_id INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, fixture_id)
+);
+
+-- Подписки браузера/приложения на web-push. У одного человека их может быть
+-- несколько: телефон, компьютер, установленное приложение.
+CREATE TABLE IF NOT EXISTS push_subs (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    endpoint   TEXT NOT NULL UNIQUE,
+    p256dh     TEXT NOT NULL,
+    auth       TEXT NOT NULL,
+    device     TEXT,
+    created_at INTEGER NOT NULL,
+    last_ok    INTEGER NOT NULL DEFAULT 0,
+    fails      INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_push_user ON push_subs(user_id);

@@ -223,3 +223,14 @@ def photo_of(latin: str | None) -> str | None:
         return None
     row = db.query_one("SELECT photo FROM person_names WHERE latin=?", (latin,))
     return row["photo"] if row else None
+
+
+def credit_of(latin: str | None) -> dict | None:
+    """Фото с автором и лицензией. Снимки Викисклада почти все под CC BY-SA,
+    где указание автора — обязательное условие использования."""
+    if not latin:
+        return None
+    row = db.query_one("SELECT photo, photo_author, photo_license FROM person_names WHERE latin=?", (latin,))
+    if not row or not row["photo"]:
+        return None
+    return {"photo": row["photo"], "author": row["photo_author"], "license": row["photo_license"]}

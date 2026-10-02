@@ -83,6 +83,11 @@ def _migrate(conn) -> None:
                       ("photo_license", "TEXT"), ("photo_checked_at", "INTEGER DEFAULT 0")):
         if col not in cols:
             conn.execute(f"ALTER TABLE person_names ADD COLUMN {col} {decl}")
+    # login_tokens: с какого устройства начат вход и отказ «это не я»
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(login_tokens)")}
+    for col, decl in (("device", "TEXT"), ("rejected", "INTEGER NOT NULL DEFAULT 0")):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE login_tokens ADD COLUMN {col} {decl}")
     # devices table
     tables = {r[0] for r in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table'")}

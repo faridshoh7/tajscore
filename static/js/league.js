@@ -123,6 +123,7 @@ window.LeaguePage = (function () {
           <div class="prow__val">${p.value}</div>
         </div>`).join("")}
       </div>
+      ${list.some(p => p.photo) ? `<div class="card__foot photo-credit">${esc(t("photo.credit"))}</div>` : ""}
     </section>`;
   }
 
@@ -131,7 +132,8 @@ window.LeaguePage = (function () {
      вместо него заглушка с первой буквой фамилии, а не пустая дыра. */
   function photoCell(p) {
     if (p.photo) {
-      return `<img class="prow__photo" src="${esc(p.photo)}" alt="" loading="lazy"
+      const credit = t("photo.credit.short", "Фото") + ": " + (p.photo_credit || "Wikimedia Commons");
+      return `<img class="prow__photo" src="${esc(p.photo)}" alt="${esc(tname(p))}" title="${esc(credit)}" loading="lazy"
                    onerror="this.replaceWith(Object.assign(document.createElement('div'),
                             {className:'prow__photo prow__photo--none'}))">`;
     }
