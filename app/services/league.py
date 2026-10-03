@@ -96,7 +96,9 @@ def players(league_id: int, category: str = "goals", limit: int = 20) -> list[di
         d["name_en"] = d.get("name")
         d["name"] = wikidata.localize(d.get("name_en"), "ru")
         d["name_tg"] = wikidata.localize(d.get("name_en"), "tg")
-        d["photo"] = photos.photo_of(d.get("name_en"))
+        cr = photos.credit_of(d.get("name_en"))
+        d["photo"] = cr["photo"] if cr else None
+        d["photo_credit"] = " · ".join(filter(None, (cr.get("author"), cr.get("license")))) if cr else None
         out.append(d)
     return out
 

@@ -28,6 +28,39 @@ async def confirm_token(token: str, telegram_id: int) -> str:
     return await _run(auth.confirm_login_token, token, telegram_id)
 
 
+async def token_status(token: str) -> str:
+    return await _run(auth.token_status, token)
+
+
+async def token_info(token: str) -> dict | None:
+    return await _run(auth.get_login_token, token)
+
+
+async def reject_token(token: str, telegram_id: int) -> bool:
+    return await _run(auth.reject_login_token, token, telegram_id)
+
+
+async def set_notifications(user_id: int, enabled: bool) -> None:
+    await _run(auth.set_notifications, user_id, enabled)
+
+
+async def set_mute(user_id: int, fixture_id: int, muted: bool) -> None:
+    from app.notify import prefs
+    await _run(prefs.set_mute, user_id, fixture_id, muted)
+
+
+def _fav_counts(user_id: int) -> dict:
+    rows = db.query("SELECT type, COUNT(*) n FROM favorites WHERE user_id=? GROUP BY type", (user_id,))
+    out = {"team": 0, "league": 0, "match": 0}
+    for r in rows:
+        out[r["type"]] = r["n"]
+    return out
+
+
+async def fav_counts(user_id: int) -> dict:
+    return await _run(_fav_counts, user_id)
+
+
 async def user_by_tg(telegram_id: int) -> dict | None:
     return await _run(auth.get_user_by_tg, telegram_id)
 
@@ -50,6 +83,8 @@ def _stats() -> dict:
         "active": one("SELECT COUNT(*) n FROM users WHERE last_login>=?", (week,)),
         "blocked": one("SELECT COUNT(*) n FROM users WHERE is_blocked=1"),
         "favorites": one("SELECT COUNT(*) n FROM favorites"),
+        "notify_24h": one("SELECT COUNT(*) n FROM notify_sent WHERE sent_at>=?", (now - 86400,)),
+        "push_devices": one("SELECT COUNT(*) n FROM push_subs"),
     }
 
 

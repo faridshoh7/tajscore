@@ -15,6 +15,7 @@ window.API = (function () {
     matches: (tab, date) => get("/api/matches", { tab, tz: tz(), date }),
     liveScores: () => get("/api/matches/live"),
     match: id => get("/api/matches/" + id),
+    matchesBrief: ids => get("/api/matches/brief", { ids: ids.join(",") }),
     leagues: () => get("/api/leagues"),
     league: id => get("/api/leagues/" + id),
     leaguePlayers: (id, category) => get(`/api/leagues/${id}/players`, { category }),
@@ -22,6 +23,6 @@ window.API = (function () {
     team: id => get("/api/teams/" + id),
     search: q => get("/api/search", { q }),
     ads: () => get("/api/ads"),
-    status: () => get("/api/status")
+    status: () => get("/adminpanel/api/status")
   };
 })();

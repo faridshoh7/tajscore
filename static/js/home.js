@@ -67,18 +67,20 @@ window.Home = (function () {
     bar.scrollTo({ left: Math.max(0, left), behavior: smooth ? "smooth" : "auto" });
   }
 
-  async function load() {
+  /* silent — фоновое обновление: без скелетона, иначе лента мигала бы
+     каждые две минуты прямо под пальцем */
+  async function load(silent) {
     const box = $("#feed");
-    box.innerHTML = UI.skeleton(7);
+    if (!silent) box.innerHTML = UI.skeleton(7);
     try {
       const data = await API.matches(tab, tab === "date" ? curDate : null);
-      render(data);
+      render(data, silent);
     } catch (e) {
-      box.innerHTML = UI.empty("empty.matches", "empty.matches.hint", "⚠️");
+      if (!silent) box.innerHTML = UI.empty("empty.matches", "empty.matches.hint", "⚠️");
     }
   }
 
-  function render(data) {
+  function render(data, silent) {
     const box = $("#feed");
 
     // Вкладка LIVE показывает только идущие матчи. Бэкенд их уже отфильтровал,
@@ -105,9 +107,11 @@ window.Home = (function () {
       box.innerHTML = groups.map(UI.leagueBlock).join("");
     }
     // короткое затухание, чтобы подмена содержимого не «прыгала»
-    box.classList.remove("feed-swap");
-    void box.offsetWidth;
-    box.classList.add("feed-swap");
+    if (!silent) {
+      box.classList.remove("feed-swap");
+      void box.offsetWidth;
+      box.classList.add("feed-swap");
+    }
     lastScores = {};
     data.groups.forEach(g => g.matches.forEach(m => {
       lastScores[m.id] = (m.goals.home ?? "") + ":" + (m.goals.away ?? "");
@@ -135,7 +139,8 @@ window.Home = (function () {
         const timeCell = row.querySelector(".match__time");
         if (timeCell) {
           const min = m.elapsed != null ? m.elapsed + (m.extra_minute ? "+" + m.extra_minute : "") : "";
-          timeCell.className = "match__time match__time--live";
+          timeCell.className = "match__time match__time--live" +
+            (UI.delayMin(m) ? " match__time--delayed" : "");
           timeCell.innerHTML = m.status === "HT"
             ? `<span class="match__pulse"></span>${t("status.short.ht")}`
             : `<span class="match__pulse"></span>${min}`;
@@ -163,7 +168,7 @@ window.Home = (function () {
       const liveIds = new Set(matches.map(m => m.id));
       const stale = [...document.querySelectorAll(".match.is-live")]
         .filter(el => !liveIds.has(Number(el.dataset.match)));
-      if (stale.length) load();
+      if (stale.length) load(true);
     } catch (e) { /* сеть моргнула — попробуем на следующем тике */ }
   }
 
@@ -197,12 +202,14 @@ window.Home = (function () {
     // перерисовывать ленту часто незачем — данные меняются редко.
     feedTimer = setInterval(() => {
       if (document.hidden) return;
-      load();
+      load(true);
     }, 120000);
     liveTimer = setInterval(() => {
       if (document.hidden) return;
-      if (tab === "live") load(); else pollLive();
+      if (tab === "live") load(true); else pollLive();
     }, 20000);
+    // ярлык «Live» у установленного приложения открывает /?tab=live
+    if (new URLSearchParams(location.search).get("tab") === "live") setTab("live");
     document.addEventListener("visibilitychange", () => { if (!document.hidden) pollLive(); });
     document.addEventListener("tajscore:settings", () => {
       curDate = curDate || todayInTz();

@@ -28,3 +28,7 @@ static/players/
 
 # Claude
 .claude/
+
+# Ключи web-push (VAPID) и бэкапы базы — генерируются на сервере
+data/vapid.json
+data/backups/

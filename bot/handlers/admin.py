@@ -5,6 +5,7 @@
 до них просто не доходят и остаются без ответа.
 """
 import asyncio
+import html
 import logging
 import time
 
@@ -92,7 +93,9 @@ async def stats(cb: CallbackQuery):
         f"С уведомлениями: <b>{s['notify']}</b>\n"
         f"Активных за неделю: <b>{s['active']}</b>\n"
         f"Заблокировали бота: <b>{s['blocked']}</b>\n"
-        f"Записей в избранном: <b>{s['favorites']}</b>"
+        f"Записей в избранном: <b>{s['favorites']}</b>\n\n"
+        f"🔔 Уведомлений за сутки: <b>{s['notify_24h']}</b>\n"
+        f"📱 Устройств с push: <b>{s['push_devices']}</b>"
     )
     await cb.message.edit_text(text, reply_markup=back_kb())
     await cb.answer()
@@ -134,12 +137,14 @@ async def search_do(message: Message, state: FSMContext):
         return
     blocks = []
     for u in found:
-        uname = f"@{u['username']}" if u["username"] else "—"
+        # имя и username пишет сам пользователь — экранируем, иначе «<» в имени
+        # ломает HTML-разметку и Telegram отклоняет всё сообщение
+        uname = f"@{html.escape(u['username'])}" if u["username"] else "—"
         blocks.append(
-            f"👤 <b>{u['display_name']}</b>\n"
+            f"👤 <b>{html.escape(u['display_name'] or '—')}</b>\n"
             f"telegram_id: <code>{u['telegram_id']}</code>\n"
             f"username: {uname}\n"
-            f"телефон: <code>{u['phone'] or '—'}</code>\n"
+            f"телефон: <code>{html.escape(u['phone'] or '—')}</code>\n"
             f"регистрация: {repo.fmt_ts(u['created_at'])}\n"
             f"последний вход: {repo.fmt_ts(u['last_login'])}\n"
             f"уведомления: {'вкл' if u['notifications_enabled'] else 'выкл'}"

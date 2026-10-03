@@ -55,7 +55,6 @@ window.Auth = (function () {
         </div>`;
       return;
     }
-    const on = user.notifications ? " is-on" : "";
     box.innerHTML = `
       <div class="drawer__label">${t("auth.profile")}</div>
       <div class="profile">
@@ -65,11 +64,6 @@ window.Auth = (function () {
           <div class="profile__uname">${user.username ? "@" + UI.esc(user.username) : ""}</div>
         </div>
       </div>
-      <label class="switch-row">
-        <span>${t("auth.notify")}</span>
-        <span class="switch${on}" id="swNotify" role="switch"
-              aria-checked="${user.notifications}" tabindex="0"></span>
-      </label>
       <button class="btn-logout" id="btnLogout">${t("auth.logout")}</button>`;
   }
 
@@ -146,7 +140,8 @@ window.Auth = (function () {
         : "";
       if (left <= 0) { stopPoll(); expired(); return; }
       let res;
-      try { res = await req("/api/auth/poll?token=" + encodeURIComponent(data.token) + (data.sid ? "&sid=" + encodeURIComponent(data.sid) : "")); }
+      // токен и запасной sid — в теле POST, а не в адресе: адреса пишутся в журнал сервера
+      try { res = await post("/api/auth/poll", { token: data.token, sid: data.sid || null }); }
       catch (e) { return; }   // сеть моргнула — попробуем на следующем тике
       if (res.status === "ok") {
         stopPoll();
@@ -159,6 +154,8 @@ window.Auth = (function () {
             <div class="authbox__text">${UI.esc(user.name)}</div>
           </div>`);
         setTimeout(closeModal, 1500);
+      } else if (res.status === "rejected") {
+        stopPoll(); rejected();
       } else if (res.status === "expired" || res.status === "unknown") {
         stopPoll(); expired();
       }
@@ -171,6 +168,16 @@ window.Auth = (function () {
         <div class="authbox__icon">⌛️</div>
         <div class="authbox__title">${t("auth.expired.title")}</div>
         <div class="authbox__text">${t("auth.expired.text")}</div>
+        <button class="btn-tg" id="authGo">${t("auth.retry")}</button>
+      </div>`);
+  }
+
+  function rejected() {
+    openModal(`
+      <div class="authbox">
+        <div class="authbox__icon">🛑</div>
+        <div class="authbox__title">${t("auth.rejected.title")}</div>
+        <div class="authbox__text">${t("auth.rejected.text")}</div>
         <button class="btn-tg" id="authGo">${t("auth.retry")}</button>
       </div>`);
   }
@@ -193,7 +200,8 @@ window.Auth = (function () {
         const s = Settings.get();
         const items = [].concat(
           s.favLeagues.map(id => ({ type: "league", id })),
-          s.favMatches.map(id => ({ type: "match", id })));
+          s.favMatches.map(id => ({ type: "match", id })),
+          (s.favTeams || []).map(id => ({ type: "team", id })));
         if (items.length) {
           const res = await post("/api/favorites/merge", { items });
           Settings.setFavorites(res.favorites);
@@ -228,18 +236,10 @@ window.Auth = (function () {
     if (e.target.closest("#authGo") || e.target.closest("#profileLogin")) { login(); return; }
     if (e.target.closest("#authClose") || e.target.matches("#authModal")) { closeModal(); return; }
     if (e.target.closest("#btnLogout")) { logout(); return; }
-    const sw = e.target.closest("#swNotify");
-    if (sw) {
-      const on = !sw.classList.contains("is-on");
-      sw.classList.toggle("is-on", on);
-      sw.setAttribute("aria-checked", String(on));
-      setNotifications(on);
-    }
   });
 
   document.addEventListener("keydown", e => {
     if (e.key === "Escape") closeModal();
-    if (e.key === "Enter" && e.target.id === "swNotify") e.target.click();
   });
 
   /* Кнопку входа applyI18n() больше не трогает, поэтому перевести её при смене

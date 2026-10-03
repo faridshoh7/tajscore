@@ -7,12 +7,13 @@ secret_token и роут в nginx.
 """
 import asyncio
 import logging
+import time
 
-from aiogram import Bot, Dispatcher
+from aiogram import BaseMiddleware, Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import BotCommand
+from aiogram.types import BotCommand, CallbackQuery, TelegramObject
 
 from app import auth, db
 from app.config import ADMIN_TELEGRAM_ID, TELEGRAM_BOT_TOKEN
@@ -27,11 +28,44 @@ logging.basicConfig(
 log = logging.getLogger("tajscore.bot")
 
 
+class Throttle(BaseMiddleware):
+    """Защита от флуда: один человек — не чаще раза в RATE секунд.
+
+    Лишние апдейты молча отбрасываются (на нажатие кнопки отвечаем коротким
+    «Слишком часто», чтобы у человека не крутилось колёсико). Скрипт, который
+    засыпает бота сообщениями, не нагрузит ни бота, ни базу.
+    """
+    RATE = 0.7
+
+    def __init__(self) -> None:
+        self._last: dict[int, float] = {}
+
+    async def __call__(self, handler, event: TelegramObject, data: dict):
+        user = getattr(event, "from_user", None)
+        if user is None:
+            return await handler(event, data)
+        now = time.monotonic()
+        if now - self._last.get(user.id, 0.0) < self.RATE:
+            if isinstance(event, CallbackQuery):
+                try:
+                    await event.answer("Слишком часто, подождите секунду")
+                except Exception:
+                    pass
+            return None
+        self._last[user.id] = now
+        if len(self._last) > 50_000:            # не даём словарю расти бесконечно
+            cutoff = now - 60
+            self._last = {k: v for k, v in self._last.items() if v > cutoff}
+        return await handler(event, data)
+
+
 async def set_commands(bot: Bot) -> None:
     """Публичный список команд. /admin туда не кладём — незачем показывать
     его всем подряд; у админа он и так работает."""
     await bot.set_my_commands([
-        BotCommand(command="start", description="Вход на Tajscore"),
+        BotCommand(command="start", description="Начало"),
+        BotCommand(command="notify", description="Уведомления: включить или выключить"),
+        BotCommand(command="stop", description="Выключить все уведомления"),
         BotCommand(command="help", description="Как это работает"),
     ])
 
@@ -48,6 +82,9 @@ async def main() -> None:
     bot = Bot(TELEGRAM_BOT_TOKEN,
               default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())
+    throttle = Throttle()
+    dp.message.outer_middleware(throttle)
+    dp.callback_query.outer_middleware(throttle)
     # admin первым: его роутер отфильтрован по ADMIN_TELEGRAM_ID, чужие апдейты
     # спокойно проходят дальше в публичные хендлеры
     dp.include_router(admin_handlers.router)

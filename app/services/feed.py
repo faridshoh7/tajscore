@@ -56,12 +56,13 @@ def live_scores() -> dict:
     """Лёгкий ответ для автообновления: только счёт, минута и статус."""
     q = ",".join("?" * len(LIVE_STATUSES))
     rows = db.query(
-        f"""SELECT id, status_short, elapsed, extra_minute, home_goals, away_goals
+        f"""SELECT id, status_short, elapsed, extra_minute, home_goals, away_goals, updated_at
             FROM fixtures WHERE league_id IN ({_IN_LEAGUES}) AND status_short IN ({q})""",
         (*LEAGUE_IDS, *LIVE_STATUSES))
     return {"matches": [
         {"id": r["id"], "status": r["status_short"], "elapsed": r["elapsed"],
-         "extra_minute": r["extra_minute"], "home": r["home_goals"], "away": r["away_goals"]}
+         "extra_minute": r["extra_minute"], "home": r["home_goals"], "away": r["away_goals"],
+         "updated_at": r["updated_at"]}
         for r in rows]}
 
 
@@ -96,3 +97,12 @@ def popular() -> list[dict]:
     sql = (f"{FIXTURE_SELECT} WHERE f.league_id IN ({q}) AND f.timestamp > ? "
            f"ORDER BY f.timestamp LIMIT 8")
     return [fixture_row(r) for r in db.query(sql, (*POPULAR_LEAGUE_IDS, int(time.time()) - 7200))]
+
+
+def brief(ids: list[int]) -> list[dict]:
+    """Матчи по списку id в том же порядке, что и просили."""
+    if not ids:
+        return []
+    q = ",".join("?" * len(ids))
+    rows = {r["id"]: fixture_row(r) for r in db.query(f"{FIXTURE_SELECT} WHERE f.id IN ({q})", tuple(ids))}
+    return [rows[i] for i in ids if i in rows]

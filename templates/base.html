@@ -18,17 +18,32 @@
   } catch (e) { /* нет localStorage — останется светлая из разметки */ }
 })();
 </script>
-<meta name="description" content="Tajscore — футбол онлайн: Лигаи Олӣ (Истиклол, Худжанд, Регар-ТадАЗ), Лига чемпионов, АПЛ, Ла Лига, Серия А, Бундеслига. Счёт в реальном времени, таблицы, календарь.">
-<title>{% block title %}Tajscore — футбол онлайн{% endblock %}</title>
-<link rel="icon" href="/static/img/logo-round.png">
+{% set default_desc = "Tajscore — футбол онлайн: Лигаи Олӣ (Истиклол, Худжанд, Регар-ТадАЗ), сборная Таджикистана, Лига чемпионов, АПЛ, Ла Лига, Серия А, Бундеслига. Счёт в реальном времени, таблицы, календарь, уведомления о голах." %}
+<title>{% block title %}{{ meta_title or "Tajscore — футбол онлайн" }}{% endblock %}</title>
+<meta name="description" content="{{ meta_desc or default_desc }}">
+{% if noindex %}<meta name="robots" content="noindex">{% endif %}
+{% if canonical %}<link rel="canonical" href="{{ canonical }}">{% endif %}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tajscore">
+<meta property="og:title" content="{{ meta_title or 'Tajscore — футбол онлайн' }}">
+<meta property="og:description" content="{{ meta_desc or default_desc }}">
+<meta property="og:image" content="{{ site_url or '' }}/static/img/icon-512.png">
+{% if canonical %}<meta property="og:url" content="{{ canonical }}">{% endif %}
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="/static/img/logo-96.png">
 <link rel="apple-touch-icon" href="/static/img/logo-round-180.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tajscore">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://media.api-sports.io" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- Inter — интерфейс (в подмножестве cyrillic-ext есть ӯ ҳ ҷ қ ғ),
      Archivo Black — только логотип TAJSCORE в шапке. -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400..900&display=swap">
-<link rel="stylesheet" href="/static/css/style.css?v=20">
+<link rel="stylesheet" href="/static/css/style.css?v=21">
 </head>
 <body>
 
@@ -42,7 +57,7 @@
     </button>
     {% endif %}
     <a class="brand" href="/" aria-label="Tajscore">
-      <span class="brand__logo"><img src="/static/img/logo-round.png" alt="" onerror="this.remove()"></span>
+      <span class="brand__logo"><img src="/static/img/logo-96.png" alt="" width="48" height="48" onerror="this.remove()"></span>
       <span class="brand__name">TAJSCORE</span>
     </a>
 
@@ -97,6 +112,7 @@
   </aside>
 
   <main class="col col--center" id="colCenter">
+    {% if seo_h1 %}<h1 class="sr-only">{{ seo_h1 }}</h1>{% endif %}
     {% block content %}{% endblock %}
   </main>
 
@@ -137,6 +153,12 @@
 
   <!-- профиль: заполняет static/js/auth.js -->
   <div class="drawer__section" id="profileSection"></div>
+
+  <!-- уведомления: заполняет static/js/notify.js -->
+  <div class="drawer__section" id="notifySection"></div>
+
+  <!-- установка приложения: показывает static/js/pwa.js, когда это возможно -->
+  <div class="drawer__section" id="installSection" hidden></div>
 
   <div class="drawer__section">
     <div class="drawer__label" data-i18n="settings.theme">Тема</div>
@@ -212,13 +234,15 @@
   </div>
 </div>
 
-<script src="/static/js/i18n.js?v=20"></script>
-<script src="/static/js/settings.js?v=20"></script>
-<script src="/static/js/api.js?v=9"></script>
+<script src="/static/js/i18n.js?v=21"></script>
+<script src="/static/js/settings.js?v=21"></script>
+<script src="/static/js/api.js?v=10"></script>
 <script src="/static/js/ads.js?v=9"></script>
-<script src="/static/js/ui.js?v=20"></script>
-<script src="/static/js/auth.js?v=20"></script>
-<script src="/static/js/app.js?v=21"></script>
+<script src="/static/js/ui.js?v=21"></script>
+<script src="/static/js/auth.js?v=21"></script>
+<script src="/static/js/notify.js?v=1"></script>
+<script src="/static/js/pwa.js?v=1"></script>
+<script src="/static/js/app.js?v=22"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

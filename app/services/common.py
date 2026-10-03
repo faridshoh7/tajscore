@@ -72,6 +72,9 @@ def fixture_row(r) -> dict:
         "pen": {"home": r["pen_home"], "away": r["pen_away"]},
         "winner": r["winner"],
         "venue": r["venue_name"] if "venue_name" in r.keys() else None,
+        # когда счёт последний раз обновлялся: на бесплатных тарифах у части лиг
+        # он приходит с задержкой, и фронт честно показывает, насколько он свежий
+        "updated_at": r["updated_at"] if "updated_at" in r.keys() else None,
     }
 
 

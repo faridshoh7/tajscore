@@ -126,16 +126,20 @@ def drop_session(session_id: str) -> None:
 
 
 # ------------------------------------------------------------------ login-токены
-def create_login_token(session_id: str) -> dict:
+def create_login_token(session_id: str, device: str | None = None) -> dict:
     """Одноразовый токен для deep-link. Старые токены этой сессии гасим —
-    иначе две открытые вкладки дадут два живых входа."""
+    иначе две открытые вкладки дадут два живых входа.
+
+    device — краткое имя браузера («Windows / Chrome»). Бот показывает его в
+    запросе «Это вы входите?»: если ссылку переслал мошенник, человек увидит
+    чужое устройство и нажмёт «Это не я»."""
     now = _now()
     db.execute("DELETE FROM login_tokens WHERE session_id=? OR expires_at<?",
                (session_id, now))
     token = secrets.token_urlsafe(24)   # 32 символа — влезает в лимит deep-link (64)
     db.execute(
-        """INSERT INTO login_tokens (token, session_id, created_at, expires_at)
-           VALUES (?,?,?,?)""", (token, session_id, now, now + LOGIN_TOKEN_TTL))
+        """INSERT INTO login_tokens (token, session_id, created_at, expires_at, device)
+           VALUES (?,?,?,?,?)""", (token, session_id, now, now + LOGIN_TOKEN_TTL, device))
     return {
         "token": token,
         "url": f"https://t.me/{TELEGRAM_BOT_USERNAME}?start={token}",
@@ -157,13 +161,42 @@ def confirm_login_token(token: str, telegram_id: int) -> str:
     row = get_login_token(token)
     if not row:
         return "unknown"
+    if row["rejected"]:
+        return "rejected"
     if row["used"] or row["confirmed"]:
         return "used"
     if row["expires_at"] < _now():
         return "expired"
-    db.execute("UPDATE login_tokens SET telegram_id=?, confirmed=1 WHERE token=?",
-               (telegram_id, token))
+    # Условие в UPDATE — защита от гонки двух нажатий: подтвердит только первое
+    cur = db.execute(
+        "UPDATE login_tokens SET telegram_id=?, confirmed=1 WHERE token=? AND confirmed=0 AND rejected=0",
+        (telegram_id, token))
+    return "ok" if cur and cur.rowcount else "used"
+
+
+def token_status(token: str) -> str:
+    """Можно ли ещё подтвердить вход по токену: ok | unknown | expired | used | rejected."""
+    row = get_login_token(token)
+    if not row:
+        return "unknown"
+    if row["rejected"]:
+        return "rejected"
+    if row["used"] or row["confirmed"]:
+        return "used"
+    if row["expires_at"] < _now():
+        return "expired"
     return "ok"
+
+
+def reject_login_token(token: str, telegram_id: int) -> bool:
+    """«Это не я»: токен гасится, вкладка, начавшая вход, получит отказ."""
+    cur = db.execute(
+        "UPDATE login_tokens SET rejected=1, telegram_id=? WHERE token=? AND confirmed=0",
+        (telegram_id, token))
+    if cur and cur.rowcount:
+        log.warning("вход отклонён пользователем telegram_id=%s", telegram_id)
+        return True
+    return False
 
 
 def claim_login_token(token: str, session_id: str) -> dict | None:
