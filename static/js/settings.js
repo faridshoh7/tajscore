@@ -76,12 +76,11 @@
     set(patch) { Object.assign(state, patch); save(); },
     onChange(fn) { listeners.push(fn); },
 
-    /* Избранное — только для авторизованных. Гостю показываем окно входа и
-       возвращаем null: по нему вызывающий код понимает, что ничего не изменилось.
-       Локальные массивы теперь зеркало серверных — рисуем из них синхронно,
-       а сама правка уходит на сервер в фоне. */
+    /* Избранное работает и без входа: гость хранит его в этом браузере, а при
+       входе оно переносится в аккаунт (Auth.syncFavorites). Требовать вход ради
+       звёздочки — лишняя стена для нового человека. У вошедшего локальные массивы —
+       зеркало серверных: рисуем из них сразу, правка уходит на сервер в фоне. */
     toggleFav(kind, id) {
-      if (!window.Auth || !Auth.user()) { if (window.Auth) Auth.promptLogin(); return null; }
       id = Number(id);
       const list = kind === "league" ? state.favLeagues
                  : kind === "team"   ? (state.favTeams = state.favTeams || [])
@@ -90,7 +89,7 @@
       if (i >= 0) list.splice(i, 1); else list.push(id);
       save();
       const on = list.includes(id);
-      Auth.pushFavorite(kind, id, on);
+      if (window.Auth && Auth.user()) Auth.pushFavorite(kind, id, on);
       return on;
     },
     toggleFavLeague(id) { return this.toggleFav("league", id); },

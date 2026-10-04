@@ -1,4 +1,6 @@
 """Поиск по командам, лигам и матчам."""
+import time
+
 from app import db
 from app import teams_tj
 from app.config import LEAGUE_IDS
@@ -18,13 +20,29 @@ def _tj_ids(q: str) -> list[int]:
     q = teams_tj._fold(q)
     if len(q) < 2:
         return []
-    out = []
+    # Английский тоже ищем: латинский запрос «Bayern» должен находить Баварию
+    return [tid for tid, hay in _name_index() if q in hay][:200]
+
+
+_INDEX: dict = {"at": 0.0, "rows": []}
+
+
+def _name_index() -> list[tuple[int, str]]:
+    """Сложенные написания всех команд, пересобираются раз в 10 минут.
+
+    Раньше каждое нажатие клавиши в поиске прогоняло через справочник имён
+    всю таблицу teams — несколько тысяч строк. Простой скрипт, который шлёт
+    поиск в цикле, так мог загрузить сервер целиком.
+    """
+    now = time.monotonic()
+    if _INDEX["rows"] and now - _INDEX["at"] < 600:
+        return _INDEX["rows"]
+    rows = []
     for r in db.query("SELECT id, name FROM teams"):
         ru, tg, en = teams_tj.names(r["id"], r["name"])
-        # Английский тоже ищем: латинский запрос «Bayern» должен находить Баварию
-        if q in teams_tj._fold(ru) or q in teams_tj._fold(tg) or q in en.lower():
-            out.append(r["id"])
-    return out
+        rows.append((r["id"], "\x00".join((teams_tj._fold(ru), teams_tj._fold(tg), (en or "").lower()))))
+    _INDEX["rows"], _INDEX["at"] = rows, now
+    return rows
 
 
 def _teams(like: str, tj_ids: list[int], tj_in: str, q: str, limit: int) -> list[dict]:

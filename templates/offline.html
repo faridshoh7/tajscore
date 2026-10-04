@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#060A12">
+<title>Нет связи — Tajscore</title>
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+       background:#060A12;color:#E8ECF4;font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-align:center;padding:24px}
+  img{width:88px;height:88px;margin-bottom:18px}
+  h1{font-size:20px;margin:0 0 8px}
+  p{margin:0 0 20px;color:#9AA4B8}
+  button{background:#F5C518;color:#060A12;border:0;border-radius:12px;padding:12px 22px;font-weight:700;font-size:15px;cursor:pointer}
+</style>
+</head>
+<body>
+<div>
+  <img src="/static/img/logo-96.png" alt="">
+  <h1>Нет подключения к интернету</h1>
+  <p>Интернет пропал. Как только связь вернётся, счёт обновится сам.<br>
+     Интернет пайваст нест. Пас аз барқароршавӣ ҳисоб худ нав мешавад.</p>
+  <button onclick="location.reload()">Обновить</button>
+</div>
+<script>addEventListener("online", () => location.reload());</script>
+</body>
+</html>

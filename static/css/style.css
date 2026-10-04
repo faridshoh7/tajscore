@@ -1623,3 +1623,118 @@ img[src^="/static/logosligaioli/"] {
   .bonus__logo img { width: 52px; }
   .mform__name { font-size: 10.5px; }
 }
+
+/* ================================================================== добавлено: ссылки, уведомления, приложение */
+
+/* Текст только для поисковиков и экранных дикторов */
+.sr-only {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Строка матча — настоящая ссылка: подложка на всю строку, звёздочка поверх неё */
+.match__link { position: absolute; inset: 0; z-index: 1; border-radius: inherit; }
+.match__link:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+.match__fav { position: relative; z-index: 2; }
+.match__time--delayed .match__pulse { background: var(--yellow); animation: none; }
+
+/* Шапка матча: колокольчик и предупреждение о задержке */
+.mhero__actions { display: flex; justify-content: center; padding: 0 16px 14px; }
+.mhero__actions:empty { display: none; }
+.mhero__delay {
+  margin: -4px 16px 12px; padding: 7px 10px; border-radius: 9px; text-align: center;
+  font-size: 12px; color: var(--text-2);
+  background: color-mix(in srgb, var(--yellow) 12%, transparent);
+}
+.bell {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 14px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface-2);
+  color: var(--text-2); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer;
+  transition: background .16s, color .16s, border-color .16s, transform .16s;
+}
+.bell:hover { color: var(--text); transform: translateY(-1px); }
+.bell.is-on { color: var(--green); border-color: color-mix(in srgb, var(--green) 55%, transparent);
+              background: color-mix(in srgb, var(--green) 10%, transparent); }
+
+/* Раздел «Уведомления» в настройках */
+.notify-card { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+.notify-card__icon { font-size: 26px; line-height: 1; }
+.notify-card__app { width: 40px; height: 40px; border-radius: 10px; flex: none; }
+.notify-card__text { font-size: 12.5px; color: var(--text-2); line-height: 1.6; }
+.notify-status { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 12px; }
+.chip {
+  font-size: 11.5px; font-weight: 650; padding: 4px 9px; border-radius: 999px;
+  background: var(--surface-3); color: var(--text-3);
+}
+.chip--on { background: color-mix(in srgb, var(--green) 16%, transparent); color: var(--green); }
+.btn-outline {
+  width: 100%; height: 38px; border-radius: var(--r);
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+  font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
+  transition: background .16s, border-color .16s;
+}
+.btn-outline:hover { background: var(--hover); border-color: var(--blue); }
+.notify-hint { font-size: 12px; color: var(--text-3); line-height: 1.55; margin: -4px 0 10px; }
+.notify-hint a { color: var(--blue); }
+.notify-hint--warn { color: var(--red); }
+
+/* Окно тонкой настройки */
+.modal__box--wide {
+  width: min(520px, 100%); max-height: calc(100vh - 40px); overflow-y: auto;
+  padding: 22px 20px 18px; text-align: left; overscroll-behavior: contain;
+}
+.nset__head { padding-right: 34px; margin-bottom: 4px; }
+.nset__title { font-size: 18px; font-weight: 800; margin-bottom: 10px; }
+.switch-row--strong { color: var(--text); font-weight: 700; font-size: 14px; }
+.nset__group { padding: 12px 0 4px; border-top: 1px solid var(--border-soft); transition: opacity .2s; }
+.nset__group.is-off, .nset__row.is-off { opacity: .45; pointer-events: none; }
+.nset__label {
+  font-size: 11px; font-weight: 800; letter-spacing: .9px; text-transform: uppercase;
+  color: var(--text-3); margin-bottom: 8px;
+}
+.nset .switch-row { padding: 6px 0 8px; }
+.nset .switch-row small, .nset__row small { display: block; font-size: 11px; color: var(--text-3); margin-top: 1px; }
+.nset__row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px;
+             color: var(--text-2); padding: 4px 0 12px; }
+.nset__row > span { flex: 1 1 140px; }
+.nset__row--col { flex-direction: column; align-items: stretch; gap: 6px; }
+.seg--sm { flex: 1 1 220px; }
+.seg--sm button { padding: 6px 4px; font-size: 12px; }
+.select--time { width: auto; flex: 0 0 auto; padding: 6px 8px; }
+.nset__foot { border-top: 1px solid var(--border-soft); padding-top: 14px; }
+.nset__foot .notify-hint { margin: 8px 0 0; text-align: center; }
+
+/* Всплывающее сообщение */
+.toast {
+  position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 200;
+  transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+  padding: 10px 16px; border-radius: 12px; max-width: calc(100% - 32px);
+  background: var(--text); color: var(--surface); font-size: 13px; font-weight: 650;
+  box-shadow: var(--shadow-lg); transition: opacity .2s, transform .2s;
+}
+.toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+
+/* Плашка «Установить приложение» */
+.pwa-banner {
+  position: fixed; left: 12px; right: 12px; z-index: 110;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 10px 10px 12px; border-radius: 14px;
+  background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow-lg);
+  animation: pwaIn .35s ease;
+}
+@keyframes pwaIn { from { transform: translateY(20px); opacity: 0; } }
+.pwa-banner img { width: 38px; height: 38px; border-radius: 9px; }
+.pwa-banner__text { flex: 1; min-width: 0; display: grid; font-size: 12.5px; color: var(--text-2); }
+.pwa-banner__text b { color: var(--text); font-size: 13.5px; }
+.pwa-banner__btn {
+  padding: 8px 14px; border-radius: 10px; border: 0; cursor: pointer;
+  background: var(--yellow); color: #0A0E18; font: inherit; font-size: 13px; font-weight: 800;
+}
+.pwa-banner__close { color: var(--text-3); font-size: 15px; padding: 6px; cursor: pointer; background: none; border: 0; }
+@media (min-width: 900px) {
+  .pwa-banner { left: auto; right: 20px; bottom: 20px; width: 380px; }
+}
+
+.photo-credit { font-size: 11px; color: var(--text-3); }

@@ -49,8 +49,10 @@ LEAGUE_BY_CODE = {v: k for k, v in COMPETITIONS.items()}
 STATUS = {
     "SCHEDULED": ("NS", "Not Started"),
     "TIMED":     ("NS", "Not Started"),
-    "IN_PLAY":   ("2H", "Second Half"),
+    "IN_PLAY":   ("1H", "In Play"),      # тайм уточняет _live_clock
     "PAUSED":    ("HT", "Halftime"),
+    "EXTRA_TIME": ("ET", "Extra Time"),
+    "PENALTY_SHOOTOUT": ("P", "Penalty In Progress"),
     "FINISHED":  ("FT", "Match Finished"),
     "SUSPENDED": ("SUSP", "Match Suspended"),
     "POSTPONED": ("PST", "Match Postponed"),
@@ -180,14 +182,22 @@ def _save_matches(items: list[dict], league_id: int | None = None,
             rnd = f"Matchday {m['matchday']}" if m.get("matchday") else (m.get("stage") or "")
 
             fid = _existing_fixture(lid, hid, aid, ts) or FIXTURE_OFFSET + int(m["id"])
+            elapsed = extra = None
+            if m.get("status") == "IN_PLAY":
+                prev = conn.execute("SELECT status_short FROM fixtures WHERE id=?", (fid,)).fetchone()
+                st_short, elapsed, extra = _live_clock(m, ts, prev[0] if prev else None)
+            elif st_short == "HT":
+                elapsed = 45
             conn.execute(
                 """INSERT INTO fixtures (id, league_id, season, round, date_utc, timestamp,
                         status_short, status_long, home_id, away_id, home_goals, away_goals,
-                        ht_home, ht_away, ft_home, ft_away, winner, updated_at)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                        ht_home, ht_away, ft_home, ft_away, winner, updated_at,
+                        elapsed, extra_minute)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                    ON CONFLICT(id) DO UPDATE SET
                         round=excluded.round, date_utc=excluded.date_utc,
                         timestamp=excluded.timestamp,
+                        elapsed=excluded.elapsed, extra_minute=excluded.extra_minute,
                         status_short=excluded.status_short, status_long=excluded.status_long,
                         home_goals=excluded.home_goals, away_goals=excluded.away_goals,
                         ht_home=excluded.ht_home, ht_away=excluded.ht_away,
@@ -195,10 +205,44 @@ def _save_matches(items: list[dict], league_id: int | None = None,
                         winner=excluded.winner, updated_at=excluded.updated_at""",
                 (fid, lid, sea, rnd, date_utc, ts, st_short, st_long, hid, aid,
                  ft.get("home"), ft.get("away"), ht.get("home"), ht.get("away"),
-                 ft.get("home"), ft.get("away"), winner, now))
+                 ft.get("home"), ft.get("away"), winner, now, elapsed, extra))
             n += 1
     return n
 
+
+
+def _live_clock(m: dict, ts: int, prev_status: str | None) -> tuple[str | None, int | None, int | None]:
+    """Тайм и минута идущего матча: (status_short, elapsed, extra).
+
+    Бесплатный football-data не говорит ни минуту, ни тайм — только IN_PLAY.
+    Раньше это превращалось в «2-й тайм» с первой же минуты. Теперь минута
+    берётся из ответа, если она там есть, иначе оценивается от времени начала:
+    первый тайм ~47 минут, перерыв ~15. Ошибка — пара минут, а не целый тайм.
+    """
+    status = m.get("status")
+    if status != "IN_PLAY":
+        return None, None, None
+    minute = m.get("minute")
+    try:
+        minute = int(minute) if minute is not None else None
+    except (TypeError, ValueError):
+        minute = None
+    if minute is None:
+        if not ts:
+            return "1H", None, None
+        mins = max(1, (int(time.time()) - ts) // 60)
+        second = prev_status in ("HT", "2H") or mins > 49
+        if not second:
+            minute = mins
+        else:
+            minute = max(46, mins - 17)
+    if minute <= 45 and prev_status not in ("HT", "2H"):
+        return "1H", minute, None
+    if minute <= 45:
+        minute = 46
+    if minute > 90:
+        return "2H", 90, min(minute - 90, 15)
+    return "2H", minute, None
 
 
 def _cooldown(key: str, reason: str) -> None:

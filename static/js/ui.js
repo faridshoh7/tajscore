@@ -20,6 +20,15 @@ window.UI = (function () {
     return LOGO_OVER_FLAG.includes(l.id) ? (l.logo || l.flag) : (l.flag || l.logo);
   }
 
+  /* Насколько устарел счёт идущего матча, в минутах (0 — свежий).
+     У части лиг на бесплатном тарифе счёт обновляется раз в несколько минут —
+     лучше честно сказать об этом, чем выдавать старый счёт за живой. */
+  function delayMin(m) {
+    if (!m || !m.updated_at || !LIVE.has(m.status)) return 0;
+    const mins = Math.floor((Date.now() / 1000 - m.updated_at) / 60);
+    return mins >= 4 ? mins : 0;
+  }
+
   /* Левая колонка времени: часы, минута матча или «Финал» */
   function timeCell(m, opts) {
     if (LIVE.has(m.status)) {
@@ -28,7 +37,10 @@ window.UI = (function () {
       if (m.status === "HT") return `<div class="match__time match__time--live match__time--word">
         <span class="match__pulse"></span>${esc(t("status.short.ht"))}</div>`;
       const min = m.elapsed != null ? m.elapsed + (m.extra_minute ? "+" + m.extra_minute : "") : "";
-      return `<div class="match__time match__time--live"><span class="match__pulse"></span>${esc(min)}</div>`;
+      const late = delayMin(m);
+      // жёлтая неподвижная точка вместо красной пульсирующей = счёт с задержкой
+      return `<div class="match__time match__time--live${late ? " match__time--delayed" : ""}"${late ? ` title="${esc(t("live.delayed").replace("{n}", late))}"` : ""}>
+        <span class="match__pulse"></span>${esc(min)}</div>`;
     }
     if (DONE.has(m.status)) {
       return `<div class="match__time">${esc(Settings.formatTime(m.timestamp))}
@@ -75,7 +87,12 @@ window.UI = (function () {
     const cls = "match" + (live ? " is-live" : "") + (opts.mini ? " match--mini" : "");
     // --j задаёт задержку каскада внутри блока лиги (см. .league-block .match в CSS)
     const stagger = opts.j != null ? ` style="--j:${opts.j}"` : "";
+    // Ссылка растянута на всю строку (см. .match__link в CSS): так матч
+    // открывается в новой вкладке, долгим нажатием на телефоне, и поисковики
+    // видят переход на страницу матча. Звёздочка лежит поверх ссылки.
+    const label = `${tname(m.home)} — ${tname(m.away)}`;
     return `<div class="${cls}" data-match="${m.id}"${stagger}>
+      <a class="match__link" href="/match/${m.id}" aria-label="${esc(label)}"></a>
       ${timeCell(m, opts)}
       <div class="match__teams">
         ${teamRow(m.home, "home", m)}
@@ -144,9 +161,11 @@ window.UI = (function () {
       if (window.App && App.renderFavorites) App.renderFavorites();
       return;
     }
+    // Строки без ссылки-подложки (мини-строки формы на странице матча)
     const row = e.target.closest("[data-match]");
-    if (row && !e.target.closest("a")) location.href = "/match/" + row.dataset.match;
+    if (row && !e.target.closest("a") && !row.querySelector(".match__link"))
+      location.href = "/match/" + row.dataset.match;
   });
 
-  return { esc, logo, leagueIcon, matchRow, leagueBlock, empty, skeleton, timeCell, scoreCell, LIVE, DONE, starSvg };
+  return { esc, logo, leagueIcon, matchRow, leagueBlock, empty, skeleton, timeCell, scoreCell, LIVE, DONE, starSvg, delayMin };
 })();

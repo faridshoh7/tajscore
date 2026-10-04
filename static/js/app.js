@@ -63,15 +63,12 @@ window.App = (function () {
   async function renderFavorites() {
     const box = $("#favoritesList");
     if (!box) return;
-    if (window.Auth && !Auth.user()) {
-      box.innerHTML = UI.empty("empty.favorites.guest", "empty.favorites.guest.hint", "🔒");
-      return;
-    }
     const ids = Settings.get().favMatches;
     if (!ids.length) { box.innerHTML = UI.empty("empty.favorites", "empty.favorites.hint", "⭐"); return; }
     try {
-      const list = await Promise.all(ids.slice(-8).map(id => API.match(id).catch(() => null)));
-      const ok = list.filter(Boolean);
+      // одним лёгким запросом: полная карточка матча здесь не нужна
+      const { matches } = await API.matchesBrief(ids.slice(-8));
+      const ok = matches;
       box.innerHTML = ok.length
         ? ok.map(m => UI.matchRow(m, { mini: true })).join("")
         : UI.empty("empty.favorites", "empty.favorites.hint", "⭐");
@@ -252,6 +249,8 @@ window.App = (function () {
     initSearch();
     initSettings();
     initMobile();
+    if (window.PWA) PWA.init();
+    if (window.Notify) Notify.init();
     if (window.Ads) Ads.init();
     renderLeagues(opts.activeLeagueId);
     renderPopular();

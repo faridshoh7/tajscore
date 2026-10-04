@@ -1,8 +1,9 @@
 """JSON API сайта. Читает ТОЛЬКО SQLite — наружу отсюда запросов нет."""
+from datetime import datetime
+
 from fastapi import APIRouter, HTTPException, Query
 
 from app import ads as ads_store
-from app import analytics, budget, db
 from app.config import DEFAULT_TZ
 from app.services import feed as feed_svc
 from app.services import league as league_svc
@@ -19,7 +20,13 @@ def leagues():
 
 
 @router.get("/matches")
-def matches(tab: str = "today", tz: str = DEFAULT_TZ, date: str | None = None):
+def matches(tab: str = "today", tz: str = Query(DEFAULT_TZ, max_length=64),
+            date: str | None = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$")):
+    if date:
+        try:
+            datetime.strptime(date, "%Y-%m-%d")
+        except ValueError:
+            raise HTTPException(422, "Неверная дата")
     return feed_svc.feed(tab, tz, date)
 
 
@@ -32,6 +39,17 @@ def live():
 @router.get("/popular")
 def popular():
     return {"matches": feed_svc.popular()}
+
+
+@router.get("/matches/brief")
+def matches_brief(ids: str = Query("", max_length=200)):
+    """Короткие строки нескольких матчей — для колонки «Избранное».
+    Полная карточка тут не нужна и к тому же заказывала бы обновление у API."""
+    try:
+        wanted = [int(x) for x in ids.split(",") if x.strip()][:20]
+    except ValueError:
+        raise HTTPException(422, "Неверный список матчей")
+    return {"matches": feed_svc.brief(wanted)}
 
 
 @router.get("/matches/{fixture_id}")
@@ -78,16 +96,8 @@ def team(team_id: int):
 
 
 @router.get("/search")
-def search(q: str = ""):
+def search(q: str = Query("", max_length=60)):
     return search_svc.search(q)
-
-
-@router.get("/status")
-def status():
-    """Диагностика: расход лимита, состояние воркера, объём базы."""
-    counts = {t: db.query_one(f"SELECT COUNT(*) n FROM {t}")["n"]
-              for t in ("fixtures", "teams", "fixture_events", "standings", "player_stats")}
-    return {"worker": worker.status(), "db": counts, "budget": budget.stats()}
 
 
 @router.get("/ads")

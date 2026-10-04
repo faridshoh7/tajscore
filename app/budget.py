@@ -25,6 +25,7 @@ PRIORITY = {
     "fixtures_today": 2,
     "tj_detail": 2,
     "detail": 3,
+    "detail_user": 3,
     "fixtures_around": 4,
     "standings": 5,
     "fixtures_horizon": 6,
@@ -110,7 +111,7 @@ def can_spend(task: str, active_pools: set[str] | None = None) -> bool:
     if pool_remaining(pool, active_pools) <= 0:
         return False
     # Резерв под карточки матчей трогают только Лигаи Олӣ и самые срочные задачи.
-    if pool not in _RESERVE_FREE and task not in ("live", "detail", "fixtures_today") \
+    if pool not in _RESERVE_FREE and task not in ("live", "detail", "detail_user", "fixtures_today") \
             and left <= RESERVE_FOR_DETAILS:
         return False
     return True

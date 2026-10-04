@@ -19,7 +19,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.templating import Jinja2Templates
 
-from app import budget, db
+from app import budget, db, ratelimit
 from app.config import (
     DAILY_SOFT_LIMIT, FD_SYNC, LEAGUES, ODDS, PHOTOS, SYNC, TEMPLATES_DIR,
 )
@@ -60,6 +60,11 @@ DEVICE_COOKIE = "ts_device"
 DEVICE_COOKIE_TTL = 365 * 86400
 
 SKIP_PREFIXES = ("/static", "/api", "/adminpanel", "/favicon")
+SKIP_PATHS = ("/sw.js", "/manifest.webmanifest", "/robots.txt", "/sitemap.xml", "/offline")
+# Поисковики, превью ссылок в мессенджерах и скрипты — не люди, в статистику не идут
+BOT_MARKERS = ("bot", "crawl", "spider", "slurp", "facebookexternalhit", "preview",
+               "curl", "wget", "python", "httpx", "go-http", "java/", "headless",
+               "lighthouse", "uptime", "monitor", "scan")
 
 
 def _parse_device_name(ua: str) -> str:
@@ -108,15 +113,22 @@ def _parse_device_name(ua: str) -> str:
 def record_visit(request: Request, response: Response) -> None:
     """Регистрирует заход. Устройство определяется по cookie, не по IP."""
     path = request.url.path
-    if any(path.startswith(p) for p in SKIP_PREFIXES):
+    if any(path.startswith(p) for p in SKIP_PREFIXES) or path in SKIP_PATHS:
+        return
+    if request.method != "GET":
+        return          # HEAD шлют мониторинги аптайма — это не посетители
+    ua_low = (request.headers.get("user-agent") or "").lower()
+    if not ua_low or any(b in ua_low for b in BOT_MARKERS):
         return
     try:
         device_id = request.cookies.get(DEVICE_COOKIE)
         if not device_id:
             device_id = uuid.uuid4().hex
+            proto = request.headers.get("x-forwarded-proto") or request.url.scheme
             response.set_cookie(
                 DEVICE_COOKIE, device_id,
-                max_age=DEVICE_COOKIE_TTL, httponly=True, samesite="lax")
+                max_age=DEVICE_COOKIE_TTL, httponly=True, samesite="lax",
+                secure=proto == "https")
 
         now = int(time.time())
         ua = (request.headers.get("user-agent") or "")[:400]
@@ -139,17 +151,29 @@ def record_visit(request: Request, response: Response) -> None:
         log.exception("не удалось записать посещение")
 
 
-def require_admin(credentials: HTTPBasicCredentials = Depends(security)) -> str:
+def require_admin(request: Request,
+                  credentials: HTTPBasicCredentials = Depends(security)) -> str:
+    """Basic Auth с защитой от подбора: после 5 неверных паролей за 15 минут
+    адрес блокируется на 30 минут, а админу в лог пишется предупреждение."""
     if not ADMIN_PASSWORD:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Админка не настроена")
+    ip = ratelimit.client_ip(request)
+    left = ratelimit.admin_locked(ip)
+    if left:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
+                            f"Слишком много неверных попыток. Повторите через {left // 60 + 1} мин.",
+                            headers={"Retry-After": str(left)})
     if credentials is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Требуется вход",
                             headers={"WWW-Authenticate": "Basic"})
-    ok_user = secrets.compare_digest(credentials.username, ADMIN_USER)
-    ok_pass = secrets.compare_digest(credentials.password, ADMIN_PASSWORD)
+    ok_user = secrets.compare_digest(credentials.username.encode(), ADMIN_USER.encode())
+    ok_pass = secrets.compare_digest(credentials.password.encode(), ADMIN_PASSWORD.encode())
     if not (ok_user and ok_pass):
+        if ratelimit.admin_failed(ip):
+            log.warning("админка: адрес %s заблокирован после серии неверных паролей", ip)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Неверный логин или пароль",
                             headers={"WWW-Authenticate": "Basic"})
+    ratelimit.admin_ok(ip)
     return credentials.username
 
 
@@ -272,6 +296,16 @@ def admin_page(request: Request, _: str = Depends(require_admin), tab: str = "ov
         "retention": RETENTION_DAYS,
     }
     return templates.TemplateResponse("admin.html", data)
+
+
+@router.get("/api/status")
+def admin_status(_: str = Depends(require_admin)):
+    """Диагностика воркеров и бюджета. Раньше висела открытой на /api/status —
+    по ней любой видел устройство сайта и остаток лимита."""
+    from app.sync import worker
+    counts = {t: db.query_one(f"SELECT COUNT(*) n FROM {t}")["n"]
+              for t in ("fixtures", "teams", "fixture_events", "standings", "player_stats")}
+    return {"worker": worker.status(), "db": counts, "budget": budget.stats()}
 
 
 @router.get("/api/stats", response_class=HTMLResponse)
